@@ -247,7 +247,7 @@ function App(){
           <div style={{display:'flex',alignItems:'stretch',gap:0}}>
             {[
               {v:fmtNum(stats?.totalFolders),l:'Folders',t:'Total folders in your Drive'},
-              {v:stats?.totalSize||'—',l:'Est. Size',t:'Estimated from folder metadata'},
+              {v:stats?.totalSize||'—',l:'Total Size',t:'Real sizes measured by Google Drive API'},
               {v:fmtNum(stats?.totalCategories),l:'Categories',t:'Top-level subjects'},
             ].map((s,i)=>(
               <div key={i} title={s.t} style={{padding:'0 24px',textAlign:'center',borderLeft:'1px solid var(--border)',cursor:'help'}}>
@@ -278,12 +278,16 @@ function App(){
 
           <div style={{flex:1}}/>
 
-          {/* Last synced */}
-          {syncInfo?.lastSyncTime&&(
+          {/* Last updated */}
+          {(syncInfo?.lastSyncTime||stats?.lastUpdated)&&(
             <div style={{display:'flex',alignItems:'center',gap:5,fontSize:'0.6rem',color:'var(--text3)',fontFamily:'monospace'}}
-              title={`Last: ${fmtIST(syncInfo.lastSyncTime)}`}>
-              <span style={{width:4,height:4,borderRadius:'50%',background:syncInfo.lastSyncStatus?.startsWith('ok')?'#5a8a5e':'var(--text3)',flexShrink:0,animation:'pulse-dot 3s ease infinite'}}/>
-              {fmtRel(syncInfo.lastSyncTime)}
+              title={`Last updated: ${fmtIST(syncInfo?.lastSyncTime||stats?.lastUpdated)}`}>
+              <span style={{width:4,height:4,borderRadius:'50%',flexShrink:0,
+                background:syncInfo?.lastSyncStatus?.startsWith('ok')?'#5a8a5e':'rgba(212,168,83,0.5)',
+                animation:'pulse-dot 3s ease infinite'}}/>
+              <span>Updated {fmtRel(syncInfo?.lastSyncTime||stats?.lastUpdated)}</span>
+              <span style={{color:'rgba(255,255,255,0.12)'}}>·</span>
+              <span style={{color:'rgba(255,255,255,0.25)'}}>{fmtIST(syncInfo?.lastSyncTime||stats?.lastUpdated)}</span>
             </div>
           )}
 
