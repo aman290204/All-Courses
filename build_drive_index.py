@@ -36,7 +36,8 @@ TOKEN_FILE        = "token.pickle"
 OUTPUT_FOLDERS    = "drive_folders.json"
 OUTPUT_STRUCTURE  = "structure_full.txt"
 OUTPUT_MAINSIZES  = "main_folder_sizes.txt"
-CHECKPOINT_FILE   = ".size_checkpoint.json"   # deleted after successful run
+CHECKPOINT_FILE   = ".size_checkpoint.json"   # temp resume file, deleted on success
+SIZE_CACHE_FILE   = ".size_cache.json"         # persistent: {fileId:[size,parentId]}
 CHECKPOINT_EVERY  = 200                        # save checkpoint every N pages (~200K files)
 
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
@@ -145,22 +146,97 @@ def fetch_root_meta(service, root_id):
         return {"id": root_id, "name": "Courses", "parents": []}
 
 # ─────────────────────────────── PHASE 2: FILE SIZES ─────────────────────────
+#
+# STRATEGY:
+#  • First run (no cache):  full scan → saves {fileId:[size,parentId]} + Drive
+#                           changes token. Takes ~28 min.
+#  • Next runs (cache exists): fetch changes since last token (~seconds),
+#                           update only changed files in cache, rebuild
+#                           direct_bytes from full cache (pure Python, instant).
+#  • If cache lost (redeploy etc.): falls back to full scan automatically.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _load_size_cache():
+    """Load {fileId: [size, parentId]} and the Drive changes page token."""
+    if not os.path.exists(SIZE_CACHE_FILE):
+        return None, None
+    try:
+        with open(SIZE_CACHE_FILE, "r") as f:
+            data = json.load(f)
+        print(f"  [cache] Loaded {len(data['sizes']):,} cached file sizes (saved {data.get('saved_at','?')[:10]})")
+        return data["sizes"], data["token"]
+    except Exception as e:
+        print(f"  [cache] Could not load: {e} — will do full scan")
+        return None, None
+
+def _save_size_cache(sizes, token):
+    """Persist {fileId: [size, parentId]} and changes token."""
+    with open(SIZE_CACHE_FILE, "w") as f:
+        json.dump({
+            "sizes":    sizes,
+            "token":    token,
+            "saved_at": datetime.utcnow().isoformat(),
+            "count":    len(sizes),
+        }, f)
+    print(f"  [cache] Saved {len(sizes):,} file sizes → {SIZE_CACHE_FILE}")
+
+def _get_start_token(service):
+    """Get the current Drive changes page token (bookmark for future incremental runs)."""
+    resp = retry_execute(lambda: service.changes().getStartPageToken(
+        supportsAllDrives=True, includeItemsFromAllDrives=True,
+    ))
+    return resp["startPageToken"]
+
+def _fetch_changes_since(service, token):
+    """
+    Fetch all file changes since the given token.
+    Returns (list_of_changes, new_token).
+    Each change: {fileId, removed, file:{size, parents, mimeType, trashed}}
+    """
+    changes, page_token, new_token = [], token, token
+    while page_token:
+        resp = retry_execute(lambda pt=page_token: service.changes().list(
+            pageToken=pt, pageSize=1000,
+            fields="nextPageToken,newStartPageToken,changes(fileId,removed,file(size,parents,mimeType,trashed))",
+            supportsAllDrives=True, includeItemsFromAllDrives=True,
+            includeRemoved=True,
+        ))
+        changes.extend(resp.get("changes", []))
+        new_token  = resp.get("newStartPageToken", new_token)
+        page_token = resp.get("nextPageToken")
+        print(f"  Fetching changes… {len(changes):,}", end="\r")
+    print(f"  → {len(changes):,} changes since last run          ")
+    return changes, new_token
+
+def _build_direct_bytes(sizes_cache, folder_ids):
+    """
+    Rebuild direct_bytes {parentId: total_bytes} and total_size from
+    the in-memory sizes cache. Pure Python — no API calls.
+    """
+    direct_bytes = defaultdict(int)
+    total_size   = 0
+    for fid, entry in sizes_cache.items():
+        size, parent = entry[0], entry[1]
+        if size and parent and parent in folder_ids:
+            direct_bytes[parent] += size
+        total_size += (size or 0)
+    return direct_bytes, total_size
+
 
 def count_total_files(service):
-    """Quick pre-count: pages through with zero file data to get total file count."""
-    print("  Pre-counting total files (fast pass)…", end="\r")
+    """Quick pre-count for ETA display (full scan only)."""
+    print("  Pre-counting total files…", end="\r")
     total, page_token = 0, None
     while True:
         resp = retry_execute(lambda pt=page_token: service.files().list(
             q="mimeType!='application/vnd.google-apps.folder' and trashed=false",
-            pageSize=1000,
-            fields="nextPageToken, files(id)",   # id only — just count
+            pageSize=1000, fields="nextPageToken, files(id)",
             supportsAllDrives=True, includeItemsFromAllDrives=True,
             corpora="allDrives", pageToken=pt,
         ))
         total     += len(resp.get("files", []))
         page_token = resp.get("nextPageToken")
-        print(f"  Pre-counting… {total:,} files found so far", end="\r")
+        print(f"  Pre-counting… {total:,} files", end="\r")
         if not page_token:
             break
     print(f"  Total files in Drive: {total:,}              ")
@@ -169,101 +245,152 @@ def count_total_files(service):
 
 def fetch_file_sizes(service, folder_ids, total_files=0):
     """
-    Fetch ONLY (size, parents) for every non-folder file.
-    Displays a live dashboard every page:
-      Files: 123,456 / 612,000 (20.2%) | Size: 1.23 TB | Rate: 4,200/s | ETA: 01:45
-    Checkpoint saved every CHECKPOINT_EVERY pages — safe to Ctrl+C and resume.
+    Main entry: tries incremental first, falls back to full scan.
     Returns: dict { parent_folder_id: total_direct_bytes }
     """
+    sizes_cache, changes_token = _load_size_cache()
+
+    # ── INCREMENTAL PATH ─────────────────────────────────────────────────────
+    if sizes_cache is not None and changes_token:
+        print("  [incremental] Fetching only changed files since last run…")
+        t0 = time.time()
+        changes, new_token = _fetch_changes_since(service, changes_token)
+
+        if not changes:
+            print("  [incremental] No changes — reusing cached sizes instantly")
+        else:
+            added = removed = updated = 0
+            for change in changes:
+                fid     = change["fileId"]
+                removed_ = change.get("removed", False)
+                f        = change.get("file") or {}
+                trashed  = f.get("trashed", False)
+                mime     = f.get("mimeType", "")
+
+                if mime == "application/vnd.google-apps.folder":
+                    continue  # skip folder changes — handled in phase 1
+
+                if removed_ or trashed:
+                    if fid in sizes_cache:
+                        del sizes_cache[fid]
+                        removed += 1
+                else:
+                    size    = int(f.get("size") or 0)
+                    parents = f.get("parents", [])
+                    parent  = parents[0] if parents else None
+                    if fid in sizes_cache:
+                        updated += 1
+                    else:
+                        added += 1
+                    sizes_cache[fid] = [size, parent]
+
+            print(f"  [incremental] +{added:,} new | ~{updated:,} updated | -{removed:,} removed")
+
+        # Rebuild direct_bytes from full (now-updated) cache
+        direct_bytes, total_size = _build_direct_bytes(sizes_cache, folder_ids)
+        elapsed = time.time() - t0
+        print(f"  [incremental] Done in {elapsed:.1f}s | Drive total: {fmt_size(total_size)}")
+
+        # Save updated cache + new token
+        _save_size_cache(sizes_cache, new_token)
+        return direct_bytes
+
+    # ── FULL SCAN PATH ───────────────────────────────────────────────────────
+    print("  [full scan] No cache found — scanning all files (first run)")
+    print("  Step a — Getting Drive changes token bookmark…")
+    snapshot_token = _get_start_token(service)  # bookmark BEFORE scan
+
+    print("  Step b — Pre-counting total files for ETA…")
+    total_files = count_total_files(service)
+    print()
+
+    print("  Step c — Fetching sizes (size+parents, 2 fields)…")
+    print(f"  Checkpoint every {CHECKPOINT_EVERY*1000:,} files — safe to Ctrl+C\n")
+
+    sizes_cache  = {}   # fileId → [size, parentId]
     direct_bytes = defaultdict(int)
     page_token   = None
     page_count   = 0
     file_count   = 0
     total_size   = 0
     start_time   = time.time()
-    resumed      = False
 
-    # ── Resume from checkpoint
+    # Resume mid-scan checkpoint
     if os.path.exists(CHECKPOINT_FILE):
-        print(f"  [resume] Checkpoint found — resuming…")
+        print(f"  [resume] Checkpoint found — resuming mid-scan…")
         with open(CHECKPOINT_FILE, "r") as f:
             ckpt = json.load(f)
-        direct_bytes = defaultdict(int, {k: v for k, v in ckpt["direct_bytes"].items()})
+        sizes_cache  = ckpt.get("sizes_cache", {})
+        direct_bytes = defaultdict(int, ckpt.get("direct_bytes", {}))
         page_token   = ckpt.get("page_token")
         page_count   = ckpt.get("page_count", 0)
         file_count   = ckpt.get("file_count", 0)
-        total_size   = ckpt.get("total_size",  0)
-        resumed      = True
+        total_size   = ckpt.get("total_size", 0)
+        snapshot_token = ckpt.get("snapshot_token", snapshot_token)
         print(f"  [resume] Continuing after {file_count:,} files ({fmt_size(total_size)})\n")
-
-    q = "mimeType!='application/vnd.google-apps.folder' and trashed=false"
 
     def live(extra=""):
         elapsed = time.time() - start_time
         rate    = file_count / elapsed if elapsed > 0 else 0
         pct     = (file_count / total_files * 100) if total_files else 0
-        done    = f"{file_count:,}"
         total_s = f" / {total_files:,} ({pct:.1f}%)" if total_files else ""
         eta_s   = ""
         if total_files and rate > 0:
-            remaining_files = total_files - file_count
-            eta_sec = remaining_files / rate
-            h, rem  = divmod(int(eta_sec), 3600)
-            m, s    = divmod(rem, 60)
-            eta_s   = f" | ETA {h:02d}:{m:02d}:{s:02d}" if h else f" | ETA {m:02d}:{s:02d}"
-        elapsed_s = f"{int(elapsed//60):02d}:{int(elapsed%60):02d}"
-        line = (f"  Files: {done}{total_s} | "
-                f"Size: {fmt_size(total_size)} | "
-                f"Rate: {rate:,.0f}/s | "
-                f"Elapsed: {elapsed_s}{eta_s}  {extra}")
+            rem   = (total_files - file_count) / rate
+            h, r  = divmod(int(rem), 3600); m, s = divmod(r, 60)
+            eta_s = f" | ETA {h:02d}:{m:02d}:{s:02d}" if h else f" | ETA {m:02d}:{s:02d}"
+        es = f"{int(elapsed//60):02d}:{int(elapsed%60):02d}"
+        line = (f"  Files: {file_count:,}{total_s} | Size: {fmt_size(total_size)} | "
+                f"Rate: {rate:,.0f}/s | Elapsed: {es}{eta_s}  {extra}")
         print(f"\r{line[:120]:<120}", end="", flush=True)
 
+    q = "mimeType!='application/vnd.google-apps.folder' and trashed=false"
     while True:
         resp = retry_execute(lambda pt=page_token: service.files().list(
             q=q, pageSize=1000,
-            fields="nextPageToken, files(size,parents)",
+            fields="nextPageToken, files(id,size,parents)",   # need id for cache
             supportsAllDrives=True, includeItemsFromAllDrives=True,
             corpora="allDrives", pageToken=pt,
         ))
-
         for f in resp.get("files", []):
-            size = int(f.get("size") or 0)
-            if size == 0:
-                continue
-            for pid in f.get("parents", []):
-                if pid in folder_ids:
-                    direct_bytes[pid] += size
+            fid    = f.get("id")
+            size   = int(f.get("size") or 0)
+            parents = f.get("parents", [])
+            parent  = parents[0] if parents else None
+            sizes_cache[fid] = [size, parent]
+            if size and parent and parent in folder_ids:
+                direct_bytes[parent] += size
             total_size += size
 
-        batch      = len(resp.get("files", []))
-        file_count += batch
+        file_count += len(resp.get("files", []))
         page_count += 1
         live()
-
         page_token = resp.get("nextPageToken")
 
-        # Checkpoint
         if page_count % CHECKPOINT_EVERY == 0:
             with open(CHECKPOINT_FILE, "w") as f:
                 json.dump({
-                    "direct_bytes": dict(direct_bytes),
-                    "page_token":   page_token,
-                    "page_count":   page_count,
-                    "file_count":   file_count,
-                    "total_size":   total_size,
-                    "saved_at":     datetime.utcnow().isoformat(),
+                    "sizes_cache":    sizes_cache,
+                    "direct_bytes":   dict(direct_bytes),
+                    "page_token":     page_token,
+                    "page_count":     page_count,
+                    "file_count":     file_count,
+                    "total_size":     total_size,
+                    "snapshot_token": snapshot_token,
+                    "saved_at":       datetime.utcnow().isoformat(),
                 }, f)
-            live(f"[ckpt saved]")
+            live("[ckpt saved]")
 
         if not page_token:
             break
 
-    print()  # newline after live display
-
+    print()
     if os.path.exists(CHECKPOINT_FILE):
         os.remove(CHECKPOINT_FILE)
-
     print(f"  → {file_count:,} files | Drive total: {fmt_size(total_size)}")
+
+    # Save cache for future incremental runs
+    _save_size_cache(sizes_cache, snapshot_token)
     return direct_bytes
 
 # ─────────────────────────────── PHASE 3: ROLLUP ─────────────────────────────
