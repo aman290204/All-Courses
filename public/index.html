@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Course Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,#root{height:100%}
+:root{
+  --bg:#0a0908;
+  --bg2:#0f0e0c;
+  --surface:#161412;
+  --surface2:#1c1a17;
+  --border:rgba(255,255,255,0.07);
+  --border2:rgba(255,255,255,0.04);
+  --text:#e0d9d0;
+  --text2:#8a8278;
+  --text3:#3e3b37;
+  --gold:#d4a853;
+  --gold2:#a07830;
+  --gold-glow:rgba(212,168,83,0.15);
+  --gold-glow2:rgba(212,168,83,0.06);
+}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;overflow:hidden;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:4px}
+input,button{outline:none;font:inherit;border:none;background:none}
+a{text-decoration:none;color:inherit}
+
+/* noise texture overlay */
+body::before{content:'';position:fixed;inset:0;opacity:0.025;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size:200px}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fade-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
+
+.fade-up{animation:fade-up 0.5s ease both}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+function hexRgb(h){ return `${parseInt(h.slice(1,3),16)},${parseInt(h.slice(3,5),16)},${parseInt(h.slice(5,7),16)}`; }
+function fmtNum(n){ return n?.toLocaleString('en-IN')??'—' }
+function fmtIST(iso){ if(!iso)return null; return new Date(iso).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true})+' IST'; }
+function fmtRel(iso){ if(!iso)return null; const d=Date.now()-new Date(iso).getTime(),m=Math.floor(d/60000); if(m<1)return'just now'; if(m<60)return`${m}m ago`; const h=Math.floor(m/60); if(h<24)return`${h}h ago`; return`${Math.floor(h/24)}d ago`; }
+
+function nodeHasMatch(n,q){ if(!q)return true; if(n.name.toLowerCase().includes(q))return true; return n.children?.some(c=>nodeHasMatch(c,q))??false; }
+function catHasMatch(c,q){ if(!q)return true; if(c.name.toLowerCase().includes(q))return true; return c.children?.some(n=>nodeHasMatch(n,q))??false; }
+
+function Hl({text,q}){
+  if(!q)return <>{text}</>;
+  const i=text.toLowerCase().indexOf(q);
+  if(i===-1)return <>{text}</>;
+  return <>{text.slice(0,i)}<span style={{color:'var(--gold)',fontWeight:500}}>{text.slice(i,i+q.length)}</span>{text.slice(i+q.length)}</>;
+}
+
+function TreeNode({node,depth,q,forceOpen}){
+  const has=!!(node.children?.length);
+  const cm=has&&node.children.some(c=>nodeHasMatch(c,q));
+  const sm=!!q&&node.name.toLowerCase().includes(q);
+  const vis=!q||sm||cm;
+  const [open,setOpen]=useState(false);
+  const isOpen=forceOpen||open||(!!q&&cm);
+  if(!vis)return null;
+  const pad=depth*18+14;
+  const url=node.id?`https://drive.google.com/drive/folders/${node.id}`:null;
+  return(
+    <div>
+      <div className="tree-row" onClick={()=>has&&setOpen(p=>!p)}
+        style={{display:'flex',alignItems:'center',gap:7,padding:`4px 14px 4px ${pad}px`,cursor:has?'pointer':'default',userSelect:'none'}}>
+        <span style={{flexShrink:0,width:10,fontSize:'6px',color:has?'rgba(255,255,255,0.2)':'transparent',
+          transition:'transform 0.15s',transform:isOpen&&has?'rotate(90deg)':'none',display:'inline-block'}}>▶</span>
+        <span style={{flex:1,fontSize:depth===0?'0.76rem':'0.71rem',fontWeight:depth===0?500:400,
+          color:depth===0?'rgba(224,217,208,0.9)':depth===1?'rgba(138,130,120,0.9)':'rgba(80,76,70,0.9)',lineHeight:1.45}}>
+          <Hl text={node.name} q={q}/>
+        </span>
+        {has&&<span style={{fontSize:'0.58rem',color:'var(--text3)',fontFamily:'monospace',flexShrink:0}}>{node.children.length}</span>}
+        {url&&<a href={url} target="_blank" rel="noopener" onClick={e=>e.stopPropagation()} className="go-link" title="Open in Drive">↗</a>}
+      </div>
+      {has&&isOpen&&(
+        <div style={{borderLeft:'1px solid var(--border2)',marginLeft:pad+12}}>
+          {node.children.map((c,i)=><TreeNode key={i} node={c} depth={depth+1} q={q} forceOpen={forceOpen}/>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CatBlock({cat,q,active,forceOpen}){
+  const [open,setOpen]=useState(false);
+  const vis=catHasMatch(cat,q);
+  const show=open||forceOpen||(!!q&&catHasMatch(cat,q));
+  if(!vis)return null;
+  const rgb=hexRgb(cat.hue);
+  const url=cat.driveId?`https://drive.google.com/drive/folders/${cat.driveId}`:null;
+  return(
+    <div id={`cat-${cat.id}`} className="cat-block" style={{borderBottom:'1px solid var(--border2)',scrollMarginTop:110}}>
+      <button onClick={()=>setOpen(p=>!p)} className="cat-btn"
+        style={{width:'100%',display:'flex',alignItems:'center',gap:12,padding:'13px 18px',cursor:'pointer',textAlign:'left',
+          background:show?`linear-gradient(100deg,rgba(${rgb},0.08) 0%,rgba(${rgb},0.02) 40%,transparent 70%)`:'transparent',
+          borderLeft:show?`2px solid rgba(${rgb},0.7)`:'2px solid transparent',
+          transition:'all 0.2s ease'}}>
+        <div style={{flexShrink:0,width:30,height:30,borderRadius:7,
+          background:`linear-gradient(135deg,rgba(${rgb},0.15),rgba(${rgb},0.05))`,
+          border:`1px solid rgba(${rgb},0.2)`,
+          display:'flex',alignItems:'center',justifyContent:'center',
+          fontSize:'0.58rem',fontWeight:700,color:`rgba(${rgb},0.9)`,fontFamily:'monospace',letterSpacing:'0.03em'}}>
+          {cat.id}
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:'0.83rem',fontWeight:500,letterSpacing:'-0.015em',
+            color:show?'var(--text)':'var(--text2)',
+            whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color 0.15s'}}>
+            <Hl text={cat.name} q={q}/>
+          </div>
+          <div style={{display:'flex',gap:8,marginTop:3}}>
+            <span style={{fontSize:'0.6rem',color:'var(--text3)',fontFamily:'monospace'}}>{fmtNum(cat.count)} folders</span>
+            <span style={{fontSize:'0.6rem',color:'var(--border)'}}>·</span>
+            <span style={{fontSize:'0.6rem',color:'var(--text3)',fontFamily:'monospace'}}
+              title={cat.sizeSource==='estimate'?'Estimated from folder names':'Measured by rclone'}>
+              {cat.sizeSource==='estimate'?'~':''}{cat.size}
+            </span>
+          </div>
+        </div>
+        {url&&<a href={url} target="_blank" rel="noopener" onClick={e=>e.stopPropagation()}
+          className="cat-go" title="Open in Google Drive" style={{color:`rgba(${rgb},0.5)`}}>↗</a>}
+        <span style={{flexShrink:0,fontSize:'0.6rem',color:show?`rgba(${rgb},0.7)`:'var(--text3)',
+          transition:'transform 0.2s,color 0.2s',transform:show?'rotate(180deg)':'none',display:'inline-block'}}>⌄</span>
+      </button>
+      {show&&(
+        <div style={{paddingTop:2,paddingBottom:8,background:'rgba(0,0,0,0.18)'}}>
+          {cat.children?.map((n,i)=><TreeNode key={i} node={n} depth={0} q={q} forceOpen={forceOpen}/>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Loader(){
+  return(
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20}}>
+      <div style={{width:28,height:28,border:'1.5px solid rgba(255,255,255,0.06)',
+        borderTopColor:'var(--gold2)',borderRadius:'50%',animation:'spin 0.9s linear infinite'}}/>
+      <p style={{fontSize:'0.65rem',color:'var(--text3)',fontFamily:'monospace',letterSpacing:'0.1em',textTransform:'uppercase'}}>Loading vault</p>
+    </div>
+  );
+}
+
+function App(){
+  const [data,setData]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState(null);
+  const [q,setQ]=useState('');
+  const [activeId,setActiveId]=useState('01');
+  const [forceOpen,setForceOpen]=useState(false);
+  const [syncInfo,setSyncInfo]=useState(null);
+  const inputRef=useRef(null);
+  const nq=q.trim().toLowerCase();
+
+  const load=useCallback(()=>{
+    setLoading(true);setError(null);
+    fetch('/api/tree').then(r=>{if(!r.ok)throw new Error(r.status);return r.json()})
+      .then(d=>{setData(d);setLoading(false)}).catch(e=>{setError(e.message);setLoading(false)});
+  },[]);
+
+  useEffect(()=>{load();fetch('/api/status').then(r=>r.json()).then(setSyncInfo).catch(()=>{});},[]);
+  useEffect(()=>{const t=setInterval(()=>fetch('/api/status').then(r=>r.json()).then(setSyncInfo).catch(()=>{}),60000);return()=>clearInterval(t);},[]);
+
+  const visible=useMemo(()=>(data?.categories||[]).filter(c=>catHasMatch(c,nq)),[data,nq]);
+  const stats=data?.stats;
+  const cats=data?.categories||[];
+
+  function scrollTo(id){setActiveId(id);document.getElementById(`cat-${id}`)?.scrollIntoView({behavior:'smooth',block:'start'});}
+
+  if(loading)return <Loader/>;
+  if(error)return(
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}>
+      <p style={{color:'#8a4a4a',fontSize:'0.8rem'}}>{error}</p>
+      <button onClick={load} style={{padding:'7px 20px',borderRadius:6,border:'1px solid var(--border)',color:'var(--text2)',cursor:'pointer',background:'var(--surface)'}}>Retry</button>
+    </div>
+  );
+
+  return(
+    <div className="fade-up" style={{fontFamily:'Inter,system-ui,sans-serif',background:'var(--bg)',color:'var(--text)',height:'100vh',display:'flex',flexDirection:'column',fontSize:13,position:'relative',zIndex:1}}>
+      <style>{`
+        .tree-row{transition:background 0.1s}.tree-row:hover{background:rgba(255,255,255,0.03)}
+        .cat-btn:hover{filter:brightness(1.05)}
+        .go-link{flex-shrink:0;opacity:0;transition:opacity 0.15s;width:18px;height:16px;display:inline-flex;align-items:center;justify-content:center;border-radius:3px;border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.3);font-size:0.6rem}
+        .tree-row:hover .go-link{opacity:1}.go-link:hover{color:var(--gold)!important;border-color:rgba(212,168,83,0.3)!important}
+        .cat-go{flex-shrink:0;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:5px;border:1px solid rgba(255,255,255,0.06);font-size:0.7rem;transition:all 0.15s}
+        .cat-go:hover{color:var(--gold)!important;border-color:rgba(212,168,83,0.3)!important;background:rgba(212,168,83,0.08)}
+        .sb-btn{transition:all 0.12s;border:none;cursor:pointer;text-align:left}.sb-btn:hover{background:rgba(255,255,255,0.04)!important}
+        .ctrl{padding:5px 13px;border-radius:5px;border:1px solid var(--border);color:var(--text3);font-size:0.67rem;font-weight:450;cursor:pointer;letter-spacing:0.01em;background:transparent;transition:all 0.15s}
+        .ctrl:hover{color:var(--text2);border-color:rgba(255,255,255,0.12);background:var(--surface)}
+        .ctrl.on{color:var(--gold);border-color:rgba(212,168,83,0.3);background:var(--gold-glow2)}
+        .search-in::placeholder{color:var(--text3)}.search-in:focus{border-color:rgba(212,168,83,0.3)!important;box-shadow:0 0 0 3px rgba(212,168,83,0.06)}
+        .sidebar::-webkit-scrollbar{width:0}
+        .stat-val{font-family:'Playfair Display',Georgia,serif;font-size:1.1rem;font-weight:500;color:var(--gold);letter-spacing:-0.02em;line-height:1;font-variant-numeric:tabular-nums}
+        .stat-lbl{font-size:0.5rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;font-family:monospace}
+      `}</style>
+
+      {/* ══ HEADER ══ */}
+      <header style={{flexShrink:0,background:'rgba(10,9,8,0.96)',backdropFilter:'blur(24px)',
+        borderBottom:'1px solid var(--border)',position:'relative',overflow:'hidden'}}>
+
+        {/* Subtle gold line at very top */}
+        <div style={{position:'absolute',top:0,left:0,right:0,height:'1px',
+          background:'linear-gradient(90deg,transparent 0%,rgba(212,168,83,0.4) 30%,rgba(212,168,83,0.4) 70%,transparent 100%)'}}/>
+
+        {/* Brand + stats row */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 28px',height:62}}>
+          <div style={{display:'flex',alignItems:'center',gap:14}}>
+            {/* Logo */}
+            <div style={{width:32,height:32,borderRadius:8,
+              background:'linear-gradient(145deg,rgba(212,168,83,0.12),rgba(212,168,83,0.03))',
+              border:'1px solid rgba(212,168,83,0.2)',
+              display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <rect x="1" y="1" width="5" height="5" rx="1.5" fill="#d4a853" opacity="0.9"/>
+                <rect x="8" y="1" width="5" height="5" rx="1.5" fill="#d4a853" opacity="0.35"/>
+                <rect x="1" y="8" width="5" height="5" rx="1.5" fill="#d4a853" opacity="0.35"/>
+                <rect x="8" y="8" width="5" height="5" rx="1.5" fill="#d4a853" opacity="0.12"/>
+              </svg>
+            </div>
+            <div>
+              <div style={{fontSize:'0.95rem',fontWeight:600,color:'#ede8e0',letterSpacing:'-0.025em',fontFamily:"'Playfair Display',Georgia,serif"}}>
+                Course Library
+              </div>
+              <div style={{fontSize:'0.53rem',color:'var(--text3)',fontFamily:'monospace',marginTop:1,letterSpacing:'0.08em',textTransform:'uppercase'}}>
+                Private Knowledge Vault
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div style={{display:'flex',alignItems:'stretch',gap:0}}>
+            {[
+              {v:fmtNum(stats?.totalFolders),l:'Folders',t:'Total folders in your Drive'},
+              {v:stats?.totalSize||'—',l:'Est. Size',t:'Estimated from folder metadata'},
+              {v:fmtNum(stats?.totalCategories),l:'Categories',t:'Top-level subjects'},
+            ].map((s,i)=>(
+              <div key={i} title={s.t} style={{padding:'0 24px',textAlign:'center',borderLeft:'1px solid var(--border)',cursor:'help'}}>
+                <div className="stat-val">{s.v}</div>
+                <div className="stat-lbl">{s.l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Search + controls row */}
+        <div style={{display:'flex',alignItems:'center',gap:10,padding:'9px 28px 12px',borderTop:'1px solid var(--border2)'}}>
+          <div style={{position:'relative',flex:1,maxWidth:460}}>
+            <svg style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',opacity:0.2,pointerEvents:'none'}}
+              width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
+              <line x1="9" y1="9" x2="12" y2="12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
+            <input ref={inputRef} className="search-in" value={q} onChange={e=>setQ(e.target.value)}
+              placeholder="Search courses, topics, folders…"
+              style={{width:'100%',padding:'8px 32px 8px 30px',background:'var(--surface)',
+                border:'1px solid var(--border)',borderRadius:7,color:'var(--text)',
+                fontSize:'0.75rem',transition:'all 0.2s'}}/>
+            {q&&<button onClick={()=>setQ('')} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',color:'var(--text3)',cursor:'pointer',fontSize:'0.7rem'}}>✕</button>}
+          </div>
+
+          {q&&<span style={{fontSize:'0.62rem',color:'var(--text3)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{visible.length}/{cats.length}</span>}
+
+          <div style={{flex:1}}/>
+
+          {/* Last synced */}
+          {syncInfo?.lastSyncTime&&(
+            <div style={{display:'flex',alignItems:'center',gap:5,fontSize:'0.6rem',color:'var(--text3)',fontFamily:'monospace'}}
+              title={`Last: ${fmtIST(syncInfo.lastSyncTime)}`}>
+              <span style={{width:4,height:4,borderRadius:'50%',background:syncInfo.lastSyncStatus?.startsWith('ok')?'#5a8a5e':'var(--text3)',flexShrink:0,animation:'pulse-dot 3s ease infinite'}}/>
+              {fmtRel(syncInfo.lastSyncTime)}
+            </div>
+          )}
+
+          <div style={{width:1,height:14,background:'var(--border)',flexShrink:0}}/>
+          <div style={{display:'flex',gap:4}}>
+            <button className={`ctrl${forceOpen?' on':''}`} onClick={()=>setForceOpen(true)}>Expand</button>
+            <button className="ctrl" onClick={()=>{setForceOpen(false);setQ('');}}>Collapse</button>
+          </div>
+        </div>
+      </header>
+
+      {/* ══ BODY ══ */}
+      <div style={{display:'flex',flex:1,minHeight:0,overflow:'hidden'}}>
+
+        {/* Sidebar */}
+        <nav className="sidebar" style={{width:188,flexShrink:0,borderRight:'1px solid var(--border)',
+          background:'linear-gradient(180deg,var(--bg2) 0%,var(--bg) 100%)',overflowY:'auto'}}>
+          <div style={{padding:'14px 8px'}}>
+            <div style={{fontSize:'0.5rem',color:'var(--text3)',fontFamily:'monospace',textTransform:'uppercase',
+              letterSpacing:'0.12em',padding:'2px 10px 10px'}}>Index</div>
+            {cats.map(cat=>{
+              const act=cat.id===activeId;
+              const rgb=hexRgb(cat.hue);
+              const matches=catHasMatch(cat,nq);
+              return(
+                <button key={cat.id} className="sb-btn" onClick={()=>scrollTo(cat.id)}
+                  style={{width:'100%',display:'flex',alignItems:'center',gap:8,padding:'6px 10px',
+                    borderRadius:6,marginBottom:1,
+                    background:act?`linear-gradient(90deg,rgba(${rgb},0.12),rgba(${rgb},0.04))`:'transparent',
+                    opacity:nq&&!matches?0.2:1}}>
+                  <span style={{width:3,height:3,borderRadius:'50%',flexShrink:0,
+                    background:act?`rgba(${rgb},0.9)`:'var(--text3)',transition:'background 0.15s'}}/>
+                  <span style={{fontSize:'0.7rem',flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
+                    letterSpacing:'-0.01em',color:act?'var(--text)':'var(--text2)',fontWeight:act?500:400,transition:'color 0.15s'}}>
+                    {cat.shortName}
+                  </span>
+                  <span style={{fontSize:'0.5rem',color:act?`rgba(${rgb},0.6)`:'var(--text3)',fontFamily:'monospace'}}>{cat.id}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* Main */}
+        <main style={{flex:1,overflowY:'auto',minWidth:0}}>
+          {visible.length===0?(
+            <div style={{padding:'100px 40px',textAlign:'center'}}>
+              <div style={{fontSize:'0.7rem',color:'var(--text3)',fontFamily:'monospace',letterSpacing:'0.04em'}}>
+                No results for <span style={{color:'var(--gold)'}}>"{q}"</span>
+              </div>
+            </div>
+          ):(
+            <div>
+              {visible.map(cat=>(
+                <CatBlock key={cat.id} cat={cat} q={nq} active={cat.id===activeId} forceOpen={forceOpen}/>
+              ))}
+              <div style={{height:80}}/>
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

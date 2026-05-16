@@ -1,0 +1,12 @@
+node_modules/
+*.log
+.env
+token.pickle
+credentials.json
+.size_checkpoint.json
+folder_sizes.json
+structure_full.txt
+main_folder_sizes.txt
+rclone-v1.73.1-windows-amd64/
+__pycache__/
+*.pyc
