@@ -183,7 +183,7 @@ def _save_size_cache(sizes, token):
 def _get_start_token(service):
     """Get the current Drive changes page token (bookmark for future incremental runs)."""
     resp = retry_execute(lambda: service.changes().getStartPageToken(
-        supportsAllDrives=True, includeItemsFromAllDrives=True,
+        supportsAllDrives=True,
     ))
     return resp["startPageToken"]
 
