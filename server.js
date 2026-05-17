@@ -178,7 +178,7 @@ function serializeNode(node) {
 let CACHE = null;
 
 /** Build in-memory app cache from raw records array. */
-function buildCacheFromRecords(records) {
+function buildCacheFromRecords(records, fileCount = null) {
   if (!records?.length) { console.error("[cache] Empty records"); return null; }
   const t0 = Date.now();
   const tree = buildTree(records);
@@ -210,12 +210,14 @@ function buildCacheFromRecords(records) {
     });
   }
 
-  // Read file count from size cache if available
-  let fileCount = null;
-  try {
-    const sc = readJsonFile(path.join(__dirname, ".size_cache.json"));
-    if (sc?.count) fileCount = sc.count;
-  } catch(_) {}
+  // fileCount passed in from Redis meta (drive:size_cache:meta → count field)
+  // Fallback: try disk .size_cache.json (local dev)
+  if (!fileCount) {
+    try {
+      const sc = readJsonFile(path.join(__dirname, ".size_cache.json"));
+      if (sc?.count) fileCount = sc.count;
+    } catch(_) {}
+  }
 
   const result = {
     categories,
@@ -231,14 +233,25 @@ function buildCacheFromRecords(records) {
   return result;
 }
 
-/** Read drive_folders.json from disk and build cache. */
-function buildCache() {
+/** Read drive_folders.json from disk and build cache (reads fileCount from Redis meta). */
+async function buildCache() {
   console.log("[cache] Reading drive_folders.json…");
   let records;
   try { records = readJsonFile(DATA_FILE); } catch(e) {
     console.error("[cache] Read error:", e.message); return null;
   }
-  return buildCacheFromRecords(records);
+  // Read file count from Redis meta (drive:size_cache:meta → {count, chunks, token})
+  let fileCount = null;
+  if (redis) {
+    try {
+      const raw = await redis.getBuffer("drive:size_cache:meta");
+      if (raw) {
+        const meta = await rDecompress(raw);
+        if (meta?.count) { fileCount = meta.count; console.log(`[cache] fileCount from Redis: ${fileCount.toLocaleString()}`); }
+      }
+    } catch(e) { console.warn("[cache] Could not read fileCount from Redis:", e.message); }
+  }
+  return buildCacheFromRecords(records, fileCount);
 }
 
 // ─── Python sync runner ───────────────────────────────────────────────────────
@@ -274,7 +287,7 @@ function runPythonSync() {
         syncState.lastSyncTime   = new Date().toISOString();
         syncState.lastSyncStatus = `ok — ${elapsed}s`;
         logEntry("sync", `Python completed in ${elapsed}s — rebuilding cache`);
-        CACHE = buildCache();
+        CACHE = await buildCache();
 
         // ─ Persist drive_folders.json to Redis (replaces disk as primary store)
         if (redis && CACHE) {
@@ -344,8 +357,8 @@ app.get("/api/logs", (req, res) => {
   res.json({ total: SYNC_LOG.length, entries: SYNC_LOG.slice(-limit).reverse() });
 });
 
-app.get("/api/reload", (req, res) => {
-  CACHE = buildCache();
+app.get("/api/reload", async (req, res) => {
+  CACHE = await buildCache();
   if (!CACHE) return res.status(500).json({ error: "Reload failed" });
   res.json({ ok: true, stats: CACHE.stats });
 });
@@ -371,18 +384,26 @@ const startServer = async () => {
       const buf = await redis.getBuffer("drive:folders");
       if (buf) {
         const records = await rDecompress(buf);
-        CACHE = buildCacheFromRecords(records);
-        console.log(`[redis] Loaded drive:folders \u2014 ${records.length} records`);
+        // Also load fileCount from size cache meta
+        let fileCount = null;
+        try {
+          const metaBuf = await redis.getBuffer("drive:size_cache:meta");
+          if (metaBuf) { const m = await rDecompress(metaBuf); fileCount = m?.count || null; }
+        } catch(_) {}
+        CACHE = buildCacheFromRecords(records, fileCount);
+        console.log(`[redis] Loaded drive:folders — ${records.length} records`);
+        if (fileCount) console.log(`[cache] fileCount from Redis: ${fileCount.toLocaleString()}`);
       } else {
-        console.log("[redis] No drive:folders yet \u2014 falling back to disk");
+        console.log("[redis] No drive:folders yet — falling back to disk");
       }
     } catch(e) {
-      console.error("[redis] Load error:", e.message, "\u2014 falling back to disk");
+      console.error("[redis] Load error:", e.message, "— falling back to disk");
     }
   }
 
+
   // 2. Fallback: read from disk (first deploy / local dev / Redis empty)
-  if (!CACHE) CACHE = buildCache();
+  if (!CACHE) CACHE = await buildCache();
 
   app.listen(PORT, () => {
     console.log(`\n[server] http://localhost:${PORT}`);
