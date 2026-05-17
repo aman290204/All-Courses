@@ -462,12 +462,14 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
                 break
         return local
 
-    skipped = 0
+    failed_batches = []   # collect timed-out / errored batches for sequential retry
+
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {executor.submit(_fetch_batch, b): b for b in batches}
         for future in as_completed(futures):
+            batch = futures[future]
             try:
-                result = future.result(timeout=90)  # 90s max per batch — skip if hung
+                result = future.result(timeout=90)  # 90s max — move on if hung
                 with _lock:
                     sizes_cache.update(result)
                     for fid, (sz, par) in result.items():
@@ -479,19 +481,51 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
                         elapsed = time.time() - start_time
                         rate = len(sizes_cache) / elapsed if elapsed > 0 else 0
                         m, s = divmod(int(elapsed), 60)
+                        retry_note = f" | {len(failed_batches)} queued for retry" if failed_batches else ""
                         print(f"  [parallel] {done_batches}/{n_batches} batches | "
                               f"{len(sizes_cache):,} files | {fmt_size(total_size)} | "
-                              f"{rate:,.0f} f/s | {m:02d}:{s:02d}"
-                              + (f" | {skipped} skipped" if skipped else ""),
-                              flush=True)
+                              f"{rate:,.0f} f/s | {m:02d}:{s:02d}{retry_note}", flush=True)
             except TimeoutError:
-                skipped += 1
-                print(f"\n  [warn] Batch timed out (90s) — skipping ({skipped} total skipped)", flush=True)
+                failed_batches.append(batch)
+                print(f"\n  [retry-queue] Batch timed out — will retry sequentially "
+                      f"({len(failed_batches)} queued)", flush=True)
             except Exception as e:
-                skipped += 1
-                print(f"\n  [warn] Batch error: {e} — skipping", flush=True)
+                failed_batches.append(batch)
+                print(f"\n  [retry-queue] Batch error: {e} — will retry sequentially "
+                      f"({len(failed_batches)} queued)", flush=True)
 
-    print(f"\n  → {len(sizes_cache):,} files | Drive total: {fmt_size(total_size)}", flush=True)
+    # ── Sequential retry for any failed batches ───────────────────────────────
+    if failed_batches:
+        print(f"\n  [retry] Retrying {len(failed_batches)} failed batches sequentially…", flush=True)
+        for i, batch in enumerate(failed_batches, 1):
+            q_parts = " or ".join(f"'{fid}' in parents" for fid in batch)
+            q = (f"({q_parts}) and mimeType!='application/vnd.google-apps.folder'"
+                 f" and trashed=false")
+            pt = None
+            try:
+                while True:
+                    resp = retry_execute(lambda p=pt: service.files().list(
+                        q=q, pageSize=1000,
+                        fields="nextPageToken, files(id,size,parents)",
+                        supportsAllDrives=True, includeItemsFromAllDrives=True,
+                        corpora="allDrives", pageToken=p,
+                    ))
+                    for f in resp.get("files", []):
+                        fid    = f.get("id")
+                        sz     = int(f.get("size") or 0)
+                        parent = (f.get("parents") or [None])[0]
+                        sizes_cache[fid] = [sz, parent]
+                        total_size += sz
+                        if sz and parent and parent in folder_ids:
+                            direct_bytes[parent] += sz
+                    pt = resp.get("nextPageToken")
+                    if not pt:
+                        break
+                print(f"  [retry] {i}/{len(failed_batches)} done", flush=True)
+            except Exception as e:
+                print(f"  [retry] {i}/{len(failed_batches)} FAILED again: {e}", flush=True)
+
+    print(f"\n  -> {len(sizes_cache):,} files | Drive total: {fmt_size(total_size)}", flush=True)
     if os.path.exists(CHECKPOINT_FILE):
         os.remove(CHECKPOINT_FILE)
 
