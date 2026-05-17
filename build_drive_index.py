@@ -349,11 +349,14 @@ def count_total_files(service):
     return total
 
 
-def fetch_file_sizes(service, folder_ids, total_files=0):
+def fetch_file_sizes(service, folder_ids, max_workers=None):
     """
-    Main entry: tries incremental first, falls back to full scan.
+    Main entry: tries incremental first, falls back to parallel full scan.
     Returns: dict { parent_folder_id: total_direct_bytes }
+    max_workers: override thread count (default: SCAN_WORKERS env var or 8)
     """
+    if max_workers is None:
+        max_workers = int(os.environ.get("SCAN_WORKERS", 8))
     sizes_cache, changes_token = _load_size_cache()
 
     # ── INCREMENTAL PATH ─────────────────────────────────────────────────────
@@ -410,7 +413,7 @@ def fetch_file_sizes(service, folder_ids, total_files=0):
 
     # ── Parallel folder-batch scan ─────────────────────────────────────────────────
     BATCH_SIZE  = 10    # folder IDs per query (safe URL length)
-    MAX_WORKERS = 8     # concurrent API threads
+    MAX_WORKERS = max_workers
 
     folder_id_list = list(folder_ids)
     batches = [folder_id_list[i:i+BATCH_SIZE]
@@ -648,7 +651,7 @@ def write_main_sizes_txt(path_map, folder_by_id, sizes, output_file):
 
 # ─────────────────────────────── MAIN ────────────────────────────────────────
 
-def main():
+def main(workers=8):
     print("\n╔══════════════════════════════════════════╗")
     print("║   Drive Index Builder  —  Course Library ║")
     print("╚══════════════════════════════════════════╝\n")
@@ -672,7 +675,7 @@ def main():
 
     # ── Phase 3: Fetch file sizes
     print("[3/4] Fetching file sizes…")
-    direct_bytes = fetch_file_sizes(service, folder_ids)
+    direct_bytes = fetch_file_sizes(service, folder_ids, max_workers=workers)
     print(f"  → Rolling up recursive folder totals…")
     sizes = rollup_sizes(path_map, direct_bytes, folders)
     total_bytes = sum(sizes.get(fid,0) for fid,p in path_map.items() if "/" not in p)
@@ -697,4 +700,13 @@ Done! Call /api/reload or restart server.
 """)
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description="Build Course Library drive index")
+    parser.add_argument(
+        "--workers", "-w",
+        type=int,
+        default=int(os.environ.get("SCAN_WORKERS", 8)),
+        help="Parallel API workers for full scan (default: 8, or SCAN_WORKERS env var)"
+    )
+    args = parser.parse_args()
+    main(workers=args.workers)
