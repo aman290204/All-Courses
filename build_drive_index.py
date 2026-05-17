@@ -21,7 +21,9 @@ Setup:
 
 import os, json, pickle, sys, time, base64, zlib
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from threading import Lock
 from tqdm import tqdm
 
 from googleapiclient.discovery import build
@@ -399,95 +401,84 @@ def fetch_file_sizes(service, folder_ids, total_files=0):
         _save_size_cache(sizes_cache, new_token)
         return direct_bytes
 
-    # ── FULL SCAN PATH ───────────────────────────────────────────────────────
-    print("  [full scan] No cache found — scanning all files (~26 min)", flush=True)
+    # ── FULL SCAN PATH ──────────────────────────────────────────────────────────────────
+    print("  [full scan] No cache found — parallel scan starting (~4–6 min)", flush=True)
     print("  Getting Drive changes token bookmark…")
     snapshot_token = _get_start_token(service)  # bookmark BEFORE scan
 
-    print("  Fetching sizes (size+parents, 2 fields)…")
-    print(f"  Checkpoint every {CHECKPOINT_EVERY*1000:,} files — safe to Ctrl+C\n")
+    print("  Launching parallel folder-batch workers…", flush=True)
 
-    sizes_cache  = {}   # fileId → [size, parentId]
+    # ── Parallel folder-batch scan ─────────────────────────────────────────────────
+    BATCH_SIZE  = 10    # folder IDs per query (safe URL length)
+    MAX_WORKERS = 8     # concurrent API threads
+
+    folder_id_list = list(folder_ids)
+    batches = [folder_id_list[i:i+BATCH_SIZE]
+               for i in range(0, len(folder_id_list), BATCH_SIZE)]
+    n_batches = len(batches)
+    print(f"  {n_batches:,} batches × {BATCH_SIZE} folders | {MAX_WORKERS} workers", flush=True)
+
+    sizes_cache  = {}
     direct_bytes = defaultdict(int)
-    page_token   = None
-    page_count   = 0
-    file_count   = 0
     total_size   = 0
+    done_batches = 0
     start_time   = time.time()
+    _lock        = Lock()
 
-    # Resume mid-scan checkpoint
-    if os.path.exists(CHECKPOINT_FILE):
-        print(f"  [resume] Checkpoint found — resuming mid-scan…")
-        with open(CHECKPOINT_FILE, "r") as f:
-            ckpt = json.load(f)
-        sizes_cache  = ckpt.get("sizes_cache", {})
-        direct_bytes = defaultdict(int, ckpt.get("direct_bytes", {}))
-        page_token   = ckpt.get("page_token")
-        page_count   = ckpt.get("page_count", 0)
-        file_count   = ckpt.get("file_count", 0)
-        total_size   = ckpt.get("total_size", 0)
-        snapshot_token = ckpt.get("snapshot_token", snapshot_token)
-        print(f"  [resume] Continuing after {file_count:,} files ({fmt_size(total_size)})\n")
+    # Load credentials once — they are thread-safe for reads
+    with open(TOKEN_FILE, "rb") as _tf:
+        _creds = pickle.load(_tf)
 
-    def live(extra=""):
-        elapsed = time.time() - start_time
-        rate    = file_count / elapsed if elapsed > 0 else 0
-        pct     = (file_count / total_files * 100) if total_files else 0
-        total_s = f" / {total_files:,} ({pct:.1f}%)" if total_files else ""
-        eta_s   = ""
-        if total_files and rate > 0:
-            rem   = (total_files - file_count) / rate
-            h, r  = divmod(int(rem), 3600); m, s = divmod(r, 60)
-            eta_s = f" | ETA {h:02d}:{m:02d}:{s:02d}" if h else f" | ETA {m:02d}:{s:02d}"
-        es = f"{int(elapsed//60):02d}:{int(elapsed%60):02d}"
-        line = (f"  Files: {file_count:,}{total_s} | Size: {fmt_size(total_size)} | "
-                f"Rate: {rate:,.0f}/s | Elapsed: {es}{eta_s}  {extra}")
-        print(f"\r{line[:120]:<120}", end="", flush=True)
+    def _fetch_batch(batch):
+        """Worker: fetch all files whose parent is any folder in batch."""
+        from googleapiclient.discovery import build as _build
+        svc = _build("drive", "v3", credentials=_creds, cache_discovery=False)
+        q_parts = " or ".join(f"'{fid}' in parents" for fid in batch)
+        q = f"({q_parts}) and mimeType!='application/vnd.google-apps.folder' and trashed=false"
+        local = {}
+        pt = None
+        while True:
+            resp = retry_execute(lambda p=pt: svc.files().list(
+                q=q, pageSize=1000,
+                fields="nextPageToken, files(id,size,parents)",
+                supportsAllDrives=True, includeItemsFromAllDrives=True,
+                corpora="allDrives", pageToken=p,
+            ))
+            for f in resp.get("files", []):
+                fid    = f.get("id")
+                size   = int(f.get("size") or 0)
+                parent = (f.get("parents") or [None])[0]
+                local[fid] = [size, parent]
+            pt = resp.get("nextPageToken")
+            if not pt:
+                break
+        return local
 
-    q = "mimeType!='application/vnd.google-apps.folder' and trashed=false"
-    while True:
-        resp = retry_execute(lambda pt=page_token: service.files().list(
-            q=q, pageSize=1000,
-            fields="nextPageToken, files(id,size,parents)",   # need id for cache
-            supportsAllDrives=True, includeItemsFromAllDrives=True,
-            corpora="allDrives", pageToken=pt,
-        ))
-        for f in resp.get("files", []):
-            fid    = f.get("id")
-            size   = int(f.get("size") or 0)
-            parents = f.get("parents", [])
-            parent  = parents[0] if parents else None
-            sizes_cache[fid] = [size, parent]
-            if size and parent and parent in folder_ids:
-                direct_bytes[parent] += size
-            total_size += size
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {executor.submit(_fetch_batch, b): b for b in batches}
+        for future in as_completed(futures):
+            try:
+                result = future.result()
+                with _lock:
+                    sizes_cache.update(result)
+                    for fid, (sz, par) in result.items():
+                        total_size += sz
+                        if sz and par and par in folder_ids:
+                            direct_bytes[par] += sz
+                    done_batches += 1
+                    if done_batches % 50 == 0 or done_batches == n_batches:
+                        elapsed = time.time() - start_time
+                        rate = len(sizes_cache) / elapsed if elapsed > 0 else 0
+                        m, s = divmod(int(elapsed), 60)
+                        print(f"  [parallel] {done_batches}/{n_batches} batches | "
+                              f"{len(sizes_cache):,} files | {fmt_size(total_size)} | "
+                              f"{rate:,.0f} f/s | {m:02d}:{s:02d}", flush=True)
+            except Exception as e:
+                print(f"\n  [warn] Batch error: {e}", flush=True)
 
-        file_count += len(resp.get("files", []))
-        page_count += 1
-        live()
-        page_token = resp.get("nextPageToken")
-
-        if page_count % CHECKPOINT_EVERY == 0:
-            with open(CHECKPOINT_FILE, "w") as f:
-                json.dump({
-                    "sizes_cache":    sizes_cache,
-                    "direct_bytes":   dict(direct_bytes),
-                    "page_token":     page_token,
-                    "page_count":     page_count,
-                    "file_count":     file_count,
-                    "total_size":     total_size,
-                    "snapshot_token": snapshot_token,
-                    "saved_at":       datetime.utcnow().isoformat(),
-                }, f)
-            live("[ckpt saved]")
-
-        if not page_token:
-            break
-
-    print()
+    print(f"\n  → {len(sizes_cache):,} files | Drive total: {fmt_size(total_size)}", flush=True)
     if os.path.exists(CHECKPOINT_FILE):
         os.remove(CHECKPOINT_FILE)
-    print(f"  → {file_count:,} files | Drive total: {fmt_size(total_size)}")
 
     # Save cache for future incremental runs
     _save_size_cache(sizes_cache, snapshot_token)
