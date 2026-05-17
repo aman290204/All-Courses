@@ -134,7 +134,7 @@ def get_service():
 
 # ─────────────────────────────── RETRY ───────────────────────────────────────
 
-def retry_execute(request_fn, max_retries=8, base_delay=2):
+def retry_execute(request_fn, max_retries=6, base_delay=2):
     """Exponential backoff on 429/500/502/503/504 and network errors."""
     from googleapiclient.errors import HttpError
     for attempt in range(max_retries):
@@ -143,14 +143,14 @@ def retry_execute(request_fn, max_retries=8, base_delay=2):
         except HttpError as e:
             code = e.resp.status
             if code in (429, 500, 502, 503, 504):
-                wait = base_delay * (2 ** attempt)
-                print(f"\n  [retry] HTTP {code} — waiting {wait}s (attempt {attempt+1}/{max_retries})…")
+                wait = min(base_delay * (2 ** attempt), 60)  # cap at 60s
+                print(f"\n  [retry] HTTP {code} — waiting {wait}s (attempt {attempt+1}/{max_retries})…", flush=True)
                 time.sleep(wait)
             else:
                 raise
         except Exception as e:
-            wait = base_delay * (2 ** attempt)
-            print(f"\n  [retry] {type(e).__name__}: {e} — waiting {wait}s…")
+            wait = min(base_delay * (2 ** attempt), 60)  # cap at 60s
+            print(f"\n  [retry] {type(e).__name__}: {e} — waiting {wait}s…", flush=True)
             time.sleep(wait)
     raise RuntimeError(f"API call failed after {max_retries} retries")
 
@@ -356,7 +356,7 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
     max_workers: override thread count (default: SCAN_WORKERS env var or 8)
     """
     if max_workers is None:
-        max_workers = int(os.environ.get("SCAN_WORKERS", 8))
+        max_workers = int(os.environ.get("SCAN_WORKERS", 4))  # 4 = safe default (avoids rate limits)
     sizes_cache, changes_token = _load_size_cache()
 
     # ── INCREMENTAL PATH ─────────────────────────────────────────────────────
