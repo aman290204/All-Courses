@@ -194,6 +194,13 @@ function buildCache() {
     });
   }
 
+  // Read file count from size cache if available
+  let fileCount = null;
+  try {
+    const sc = readJsonFile(path.join(__dirname, ".size_cache.json"));
+    if (sc?.count) fileCount = sc.count;
+  } catch(_) {}
+
   const result = {
     categories,
     stats: {
@@ -201,6 +208,7 @@ function buildCache() {
       totalSizeGB,  totalSize: fmtSize(totalSizeGB),
       lastUpdated:  new Date().toISOString(),
       recordCount:  records.length,
+      fileCount,
     },
   };
   console.log(`[cache] Built in ${Date.now()-t0}ms — ${records.length} records, ${totalFolders} folders`);
