@@ -92,11 +92,13 @@ function TreeNode({node,depth,q,forceOpen}){
   return(
     <div>
       <div className="tree-row" onClick={()=>has&&setOpen(p=>!p)}
-        style={{display:'flex',alignItems:'center',gap:7,padding:`4px 14px 4px ${pad}px`,cursor:has?'pointer':'default',userSelect:'none'}}>
-        <span style={{flexShrink:0,width:10,fontSize:'6px',color:has?'rgba(255,255,255,0.3)':'transparent',
-          transition:'transform 0.15s',transform:isOpen&&has?'rotate(90deg)':'none',display:'inline-block'}}>▶</span>
+        style={{display:'flex',alignItems:'center',gap:6,padding:`5px 14px 5px ${pad}px`,cursor:has?'pointer':'default',userSelect:'none'}}>
         <span style={{flex:1,fontSize:depth===0?'0.76rem':'0.71rem',fontWeight:depth===0?500:400,
-          color:depth===0?'var(--text)':depth===1?'var(--text2)':'rgba(170,162,154,0.9)',lineHeight:1.45}}>
+          color:depth===0?'var(--text)':depth===1?'var(--text2)':'rgba(170,162,154,0.9)',lineHeight:1.4,
+          display:'flex',alignItems:'center',gap:5}}>
+          {has&&<span style={{fontSize:'0.65rem',color:'rgba(255,255,255,0.35)',
+            transition:'transform 0.15s',transform:isOpen?'rotate(90deg)':'none',
+            display:'inline-block',flexShrink:0,lineHeight:1}}>›</span>}
           <Hl text={node.name} q={q}/>
         </span>
         {has&&<span style={{fontSize:'0.58rem',color:'var(--text3)',fontFamily:'monospace',flexShrink:0}}>{node.children.length}</span>}
