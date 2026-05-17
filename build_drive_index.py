@@ -400,15 +400,11 @@ def fetch_file_sizes(service, folder_ids, total_files=0):
         return direct_bytes
 
     # ── FULL SCAN PATH ───────────────────────────────────────────────────────
-    print("  [full scan] No cache found — scanning all files (first run)")
-    print("  Step a — Getting Drive changes token bookmark…")
+    print("  [full scan] No cache found — scanning all files (~26 min)", flush=True)
+    print("  Getting Drive changes token bookmark…")
     snapshot_token = _get_start_token(service)  # bookmark BEFORE scan
 
-    print("  Step b — Pre-counting total files for ETA…")
-    total_files = count_total_files(service)
-    print()
-
-    print("  Step c — Fetching sizes (size+parents, 2 fields)…")
+    print("  Fetching sizes (size+parents, 2 fields)…")
     print(f"  Checkpoint every {CHECKPOINT_EVERY*1000:,} files — safe to Ctrl+C\n")
 
     sizes_cache  = {}   # fileId → [size, parentId]
@@ -685,17 +681,7 @@ def main():
 
     # ── Phase 3: Fetch file sizes
     print("[3/4] Fetching file sizes…")
-    if os.path.exists(CHECKPOINT_FILE):
-        print("  [resume] Checkpoint found — skipping pre-count")
-        total_files = 0   # no pre-count needed on resume, ETA will show after first page
-    else:
-        print("  Step 3a — Pre-counting total files for ETA…")
-        total_files = count_total_files(service)
-        print()
-
-    print("  Step 3b — Fetching sizes (size+parents only, 2 fields)…")
-    print(f"  Checkpoint every {CHECKPOINT_EVERY*1000:,} files — safe to Ctrl+C and resume\n")
-    direct_bytes = fetch_file_sizes(service, folder_ids, total_files)
+    direct_bytes = fetch_file_sizes(service, folder_ids)
     print(f"  → Rolling up recursive folder totals…")
     sizes = rollup_sizes(path_map, direct_bytes, folders)
     total_bytes = sum(sizes.get(fid,0) for fid,p in path_map.items() if "/" not in p)
