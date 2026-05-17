@@ -356,7 +356,7 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
     max_workers: override thread count (default: SCAN_WORKERS env var or 8)
     """
     if max_workers is None:
-        max_workers = int(os.environ.get("SCAN_WORKERS", 4))  # 4 = safe default (avoids rate limits)
+        max_workers = int(os.environ.get("SCAN_WORKERS", 3))  # 3 = safe default (avoids rate limits)
     sizes_cache, changes_token = _load_size_cache()
 
     # ── INCREMENTAL PATH ─────────────────────────────────────────────────────
@@ -433,33 +433,64 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
         _creds = pickle.load(_tf)
 
     def _fetch_batch(batch):
-        """Worker: fetch all files whose parent is any folder in batch."""
-        from googleapiclient.discovery import build as _build
-        svc = _build("drive", "v3", credentials=_creds, cache_discovery=False)
-        # Set 30s timeout on the underlying httplib2 connection — prevents silent hangs
-        try:
-            svc._http.http.timeout = 30
-        except AttributeError:
-            pass
+        """
+        Worker: fetch files for up to BATCH_SIZE folders using requests.AuthorizedSession.
+        Uses timeout=(10, 30) — 10s connect, 30s read — which reliably kills SSL hangs.
+        """
+        from google.auth.transport.requests import AuthorizedSession
+        import requests as _req
+
+        session = AuthorizedSession(_creds)
         q_parts = " or ".join(f"'{fid}' in parents" for fid in batch)
-        q = f"({q_parts}) and mimeType!='application/vnd.google-apps.folder' and trashed=false"
+        q = (f"({q_parts}) and mimeType!='application/vnd.google-apps.folder'"
+             f" and trashed=false")
         local = {}
-        pt = None
+        pt     = None
+        attempt = 0
+        max_att = 5
+
         while True:
-            resp = retry_execute(lambda p=pt: svc.files().list(
-                q=q, pageSize=1000,
-                fields="nextPageToken, files(id,size,parents)",
-                supportsAllDrives=True, includeItemsFromAllDrives=True,
-                corpora="allDrives", pageToken=p,
-            ))
-            for f in resp.get("files", []):
-                fid    = f.get("id")
-                size   = int(f.get("size") or 0)
-                parent = (f.get("parents") or [None])[0]
-                local[fid] = [size, parent]
-            pt = resp.get("nextPageToken")
-            if not pt:
-                break
+            try:
+                params = {
+                    "q": q, "pageSize": 1000,
+                    "fields": "nextPageToken,files(id,size,parents)",
+                    "supportsAllDrives": True,
+                    "includeItemsFromAllDrives": True,
+                    "corpora": "allDrives",
+                }
+                if pt:
+                    params["pageToken"] = pt
+                r = session.get(
+                    "https://www.googleapis.com/drive/v3/files",
+                    params=params,
+                    timeout=(10, 30),   # hard timeout — kills any SSL hang
+                )
+                if r.status_code in (429, 500, 502, 503, 504):
+                    wait = min(2 * (2 ** attempt), 60)
+                    attempt += 1
+                    print(f"\n  [worker] HTTP {r.status_code} — retry in {wait}s", flush=True)
+                    if attempt > max_att:
+                        raise RuntimeError(f"HTTP {r.status_code} after {max_att} retries")
+                    time.sleep(wait)
+                    continue
+                r.raise_for_status()
+                attempt = 0          # reset on success
+                data = r.json()
+                for f in data.get("files", []):
+                    fid    = f.get("id")
+                    size   = int(f.get("size") or 0)
+                    parent = (f.get("parents") or [None])[0]
+                    local[fid] = [size, parent]
+                pt = data.get("nextPageToken")
+                if not pt:
+                    break
+            except (_req.exceptions.Timeout, _req.exceptions.ConnectionError) as e:
+                wait = min(2 * (2 ** attempt), 60)
+                attempt += 1
+                print(f"\n  [worker] {type(e).__name__} — retry in {wait}s", flush=True)
+                if attempt > max_att:
+                    raise
+                time.sleep(wait)
         return local
 
     failed_batches = []   # collect timed-out / errored batches for sequential retry
