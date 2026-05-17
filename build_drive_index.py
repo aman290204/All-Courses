@@ -436,6 +436,11 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
         """Worker: fetch all files whose parent is any folder in batch."""
         from googleapiclient.discovery import build as _build
         svc = _build("drive", "v3", credentials=_creds, cache_discovery=False)
+        # Set 30s timeout on the underlying httplib2 connection — prevents silent hangs
+        try:
+            svc._http.http.timeout = 30
+        except AttributeError:
+            pass
         q_parts = " or ".join(f"'{fid}' in parents" for fid in batch)
         q = f"({q_parts}) and mimeType!='application/vnd.google-apps.folder' and trashed=false"
         local = {}
@@ -457,11 +462,12 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
                 break
         return local
 
+    skipped = 0
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {executor.submit(_fetch_batch, b): b for b in batches}
         for future in as_completed(futures):
             try:
-                result = future.result()
+                result = future.result(timeout=90)  # 90s max per batch — skip if hung
                 with _lock:
                     sizes_cache.update(result)
                     for fid, (sz, par) in result.items():
@@ -475,9 +481,15 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
                         m, s = divmod(int(elapsed), 60)
                         print(f"  [parallel] {done_batches}/{n_batches} batches | "
                               f"{len(sizes_cache):,} files | {fmt_size(total_size)} | "
-                              f"{rate:,.0f} f/s | {m:02d}:{s:02d}", flush=True)
+                              f"{rate:,.0f} f/s | {m:02d}:{s:02d}"
+                              + (f" | {skipped} skipped" if skipped else ""),
+                              flush=True)
+            except TimeoutError:
+                skipped += 1
+                print(f"\n  [warn] Batch timed out (90s) — skipping ({skipped} total skipped)", flush=True)
             except Exception as e:
-                print(f"\n  [warn] Batch error: {e}", flush=True)
+                skipped += 1
+                print(f"\n  [warn] Batch error: {e} — skipping", flush=True)
 
     print(f"\n  → {len(sizes_cache):,} files | Drive total: {fmt_size(total_size)}", flush=True)
     if os.path.exists(CHECKPOINT_FILE):
