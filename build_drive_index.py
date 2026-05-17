@@ -194,20 +194,79 @@ def fetch_root_meta(service, root_id):
 #  • If cache lost (redeploy etc.): falls back to full scan automatically.
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _load_size_cache():
-    """Load {fileId: [size, parentId]} and Drive changes token from Redis → disk fallback."""
-    # 1. Try Redis
+
+REDIS_CHUNK_ENTRIES = 50_000  # ~500 KB compressed per chunk (under Upstash 1MB limit)
+
+
+def _save_size_cache(sizes, token):
+    """Persist cache to Redis in chunks — disk only if Redis unavailable."""
+    saved_at = datetime.utcnow().isoformat()
     r = _get_redis()
     if r:
+        try:
+            items  = list(sizes.items())
+            chunks = [dict(items[i:i+REDIS_CHUNK_ENTRIES])
+                      for i in range(0, len(items), REDIS_CHUNK_ENTRIES)]
+            for idx, chunk in enumerate(chunks):
+                compressed = _compress(chunk)
+                r.set(f"drive:size_cache:{idx}", compressed)
+                kb = len(compressed) / 1024
+                print(f"  [redis] chunk {idx+1}/{len(chunks)}: {len(chunk):,} entries ({kb:.0f} KB)", flush=True)
+            # Store token + chunk count in meta key
+            meta = {"chunks": len(chunks), "token": token, "saved_at": saved_at, "count": len(sizes)}
+            r.set("drive:size_cache:meta", _compress(meta))
+            # Clean up stale extra chunks from a previous larger save
+            for stale in range(len(chunks), len(chunks) + 20):
+                if r.exists(f"drive:size_cache:{stale}"):
+                    r.delete(f"drive:size_cache:{stale}")
+                else:
+                    break
+            print(f"  [redis] Saved {len(sizes):,} sizes in {len(chunks)} chunks → drive:size_cache:*", flush=True)
+            return  # done — no disk write needed
+        except Exception as e:
+            print(f"  [redis] Chunked save error: {e} — falling back to disk", flush=True)
+
+    # Disk fallback (local dev or Redis failure)
+    try:
+        payload = {"sizes": sizes, "token": token, "saved_at": saved_at, "count": len(sizes)}
+        with open(SIZE_CACHE_FILE, "w") as f:
+            json.dump(payload, f)
+        print(f"  [cache] Saved {len(sizes):,} sizes → {SIZE_CACHE_FILE}")
+    except Exception as e:
+        print(f"  [cache] Disk save error: {e}")
+
+
+def _load_size_cache():
+    """Load size cache from Redis chunks → disk fallback."""
+    r = _get_redis()
+    if r:
+        # 1a. Try chunked format (new)
+        try:
+            raw_meta = r.get("drive:size_cache:meta")
+            if raw_meta:
+                meta = _decompress(raw_meta)
+                n_chunks = meta["chunks"]
+                sizes = {}
+                for idx in range(n_chunks):
+                    raw = r.get(f"drive:size_cache:{idx}")
+                    if raw is None:
+                        raise ValueError(f"Missing chunk {idx}")
+                    sizes.update(_decompress(raw))
+                print(f"  [redis] Loaded {len(sizes):,} cached sizes in {n_chunks} chunks (saved {meta.get('saved_at','?')[:10]})", flush=True)
+                return sizes, meta["token"]
+        except Exception as e:
+            print(f"  [redis] Chunked load error: {e} — trying legacy key", flush=True)
+
+        # 1b. Legacy single-key format (backward compat)
         try:
             raw = r.get("drive:size_cache")
             if raw:
                 data = _decompress(raw)
                 n = len(data.get("sizes", {}))
-                print(f"  [redis] Loaded {n:,} cached sizes (saved {data.get('saved_at','?')[:10]})")
+                print(f"  [redis] Loaded {n:,} cached sizes (legacy, saved {data.get('saved_at','?')[:10]})")
                 return data["sizes"], data["token"]
         except Exception as e:
-            print(f"  [redis] Load error: {e} — trying disk")
+            print(f"  [redis] Legacy load error: {e} — trying disk")
 
     # 2. Fallback: disk
     if not os.path.exists(SIZE_CACHE_FILE):
@@ -220,35 +279,6 @@ def _load_size_cache():
     except Exception as e:
         print(f"  [cache] Could not load: {e} — will do full scan")
         return None, None
-
-def _save_size_cache(sizes, token):
-    """Persist cache to Redis (primary) — disk only if Redis unavailable."""
-    payload = {
-        "sizes":    sizes,
-        "token":    token,
-        "saved_at": datetime.utcnow().isoformat(),
-        "count":    len(sizes),
-    }
-
-    r = _get_redis()
-    if r:
-        # Redis available — save compressed, skip disk entirely
-        try:
-            compressed = _compress(payload)
-            r.set("drive:size_cache", compressed)
-            kb = len(compressed) / 1024
-            print(f"  [redis] Saved {len(sizes):,} sizes ({kb:,.0f} KB compressed) → drive:size_cache")
-            return  # ← done, no disk write needed
-        except Exception as e:
-            print(f"  [redis] Save error: {e} — falling back to disk")
-
-    # Disk fallback (local dev or Redis failure)
-    try:
-        with open(SIZE_CACHE_FILE, "w") as f:
-            json.dump(payload, f)
-        print(f"  [cache] Saved {len(sizes):,} sizes → {SIZE_CACHE_FILE}")
-    except Exception as e:
-        print(f"  [cache] Disk save error: {e}")
 
 
 def _get_start_token(service):
@@ -265,6 +295,7 @@ def _fetch_changes_since(service, token):
     Each change: {fileId, removed, file:{size, parents, mimeType, trashed}}
     """
     changes, page_token, new_token = [], token, token
+    page_num = 0
     while page_token:
         resp = retry_execute(lambda pt=page_token: service.changes().list(
             pageToken=pt, pageSize=1000,
@@ -275,8 +306,10 @@ def _fetch_changes_since(service, token):
         changes.extend(resp.get("changes", []))
         new_token  = resp.get("newStartPageToken", new_token)
         page_token = resp.get("nextPageToken")
-        print(f"  Fetching changes… {len(changes):,}", end="\r")
-    print(f"  → {len(changes):,} changes since last run          ")
+        page_num  += 1
+        if page_num % 10 == 0:  # print every 10 pages so Render logs show progress
+            print(f"  [changes] page {page_num} — {len(changes):,} changes so far…", flush=True)
+    print(f"  → {len(changes):,} changes since last run ({page_num} pages)", flush=True)
     return changes, new_token
 
 def _build_direct_bytes(sizes_cache, folder_ids):
@@ -323,12 +356,12 @@ def fetch_file_sizes(service, folder_ids, total_files=0):
 
     # ── INCREMENTAL PATH ─────────────────────────────────────────────────────
     if sizes_cache is not None and changes_token:
-        print("  [incremental] Fetching only changed files since last run…")
+        print(f"  [incremental] Fetching only changed files since last run…", flush=True)
         t0 = time.time()
         changes, new_token = _fetch_changes_since(service, changes_token)
 
         if not changes:
-            print("  [incremental] No changes — reusing cached sizes instantly")
+            print("  [incremental] No changes — reusing cached sizes instantly", flush=True)
         else:
             added = removed = updated = 0
             for change in changes:
