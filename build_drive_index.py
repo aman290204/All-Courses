@@ -19,7 +19,7 @@ Setup:
   python build_drive_index.py
 """
 
-import os, json, pickle, sys, time, base64
+import os, json, pickle, sys, time, base64, zlib
 from collections import defaultdict
 from datetime import datetime
 from tqdm import tqdm
@@ -41,6 +41,44 @@ SIZE_CACHE_FILE   = ".size_cache.json"         # persistent: {fileId:[size,paren
 CHECKPOINT_EVERY  = 200                        # save checkpoint every N pages (~200K files)
 
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
+
+# ─────────────────────────────── REDIS ────────────────────────────────────────
+
+_redis_conn = None
+_redis_ready = False
+
+def _get_redis():
+    """Return a cached Redis client, or None if REDIS_URL is not set."""
+    global _redis_conn, _redis_ready
+    if _redis_ready:
+        return _redis_conn
+    _redis_ready = True
+    url = os.environ.get("REDIS_URL")
+    if not url:
+        return None
+    try:
+        import redis as _rlib
+        _redis_conn = _rlib.from_url(
+            url,
+            socket_timeout=30,
+            socket_connect_timeout=10,
+            ssl_cert_reqs=None,
+            decode_responses=False,   # we store raw bytes (compressed)
+        )
+        _redis_conn.ping()
+        print("  [redis] Connected to Upstash")
+        return _redis_conn
+    except Exception as e:
+        print(f"  [redis] Not available: {e}")
+        return None
+
+def _compress(data_dict):
+    """JSON-encode then zlib-compress a dict → bytes."""
+    return zlib.compress(json.dumps(data_dict).encode("utf-8"), level=6)
+
+def _decompress(raw_bytes):
+    """Inverse of _compress."""
+    return json.loads(zlib.decompress(raw_bytes).decode("utf-8"))
 
 # ─────────────────────────────── AUTH ────────────────────────────────────────
 
@@ -157,28 +195,61 @@ def fetch_root_meta(service, root_id):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _load_size_cache():
-    """Load {fileId: [size, parentId]} and the Drive changes page token."""
+    """Load {fileId: [size, parentId]} and Drive changes token from Redis → disk fallback."""
+    # 1. Try Redis
+    r = _get_redis()
+    if r:
+        try:
+            raw = r.get("drive:size_cache")
+            if raw:
+                data = _decompress(raw)
+                n = len(data.get("sizes", {}))
+                print(f"  [redis] Loaded {n:,} cached sizes (saved {data.get('saved_at','?')[:10]})")
+                return data["sizes"], data["token"]
+        except Exception as e:
+            print(f"  [redis] Load error: {e} — trying disk")
+
+    # 2. Fallback: disk
     if not os.path.exists(SIZE_CACHE_FILE):
         return None, None
     try:
         with open(SIZE_CACHE_FILE, "r") as f:
             data = json.load(f)
-        print(f"  [cache] Loaded {len(data['sizes']):,} cached file sizes (saved {data.get('saved_at','?')[:10]})")
+        print(f"  [cache] Loaded {len(data['sizes']):,} cached sizes from disk (saved {data.get('saved_at','?')[:10]})")
         return data["sizes"], data["token"]
     except Exception as e:
         print(f"  [cache] Could not load: {e} — will do full scan")
         return None, None
 
 def _save_size_cache(sizes, token):
-    """Persist {fileId: [size, parentId]} and changes token."""
-    with open(SIZE_CACHE_FILE, "w") as f:
-        json.dump({
-            "sizes":    sizes,
-            "token":    token,
-            "saved_at": datetime.utcnow().isoformat(),
-            "count":    len(sizes),
-        }, f)
-    print(f"  [cache] Saved {len(sizes):,} file sizes → {SIZE_CACHE_FILE}")
+    """Persist cache to Redis (primary) — disk only if Redis unavailable."""
+    payload = {
+        "sizes":    sizes,
+        "token":    token,
+        "saved_at": datetime.utcnow().isoformat(),
+        "count":    len(sizes),
+    }
+
+    r = _get_redis()
+    if r:
+        # Redis available — save compressed, skip disk entirely
+        try:
+            compressed = _compress(payload)
+            r.set("drive:size_cache", compressed)
+            kb = len(compressed) / 1024
+            print(f"  [redis] Saved {len(sizes):,} sizes ({kb:,.0f} KB compressed) → drive:size_cache")
+            return  # ← done, no disk write needed
+        except Exception as e:
+            print(f"  [redis] Save error: {e} — falling back to disk")
+
+    # Disk fallback (local dev or Redis failure)
+    try:
+        with open(SIZE_CACHE_FILE, "w") as f:
+            json.dump(payload, f)
+        print(f"  [cache] Saved {len(sizes):,} sizes → {SIZE_CACHE_FILE}")
+    except Exception as e:
+        print(f"  [cache] Disk save error: {e}")
+
 
 def _get_start_token(service):
     """Get the current Drive changes page token (bookmark for future incremental runs)."""

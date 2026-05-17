@@ -10,6 +10,8 @@ const fs          = require("fs");
 const { spawn }   = require("child_process");
 const compression = require("compression");
 const cron        = require("node-cron");
+const zlib        = require("zlib");
+const Redis       = require("ioredis");
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -19,6 +21,31 @@ const DATA_FILE  = path.join(__dirname, "drive_folders.json");
 const STATE_FILE = path.join(__dirname, ".sync-state.json");
 const PYTHON_BIN = process.platform === "win32" ? "python" : "python3";
 const SYNC_SECRET = process.env.SYNC_SECRET || "localdev-changeme";
+
+// ─── Redis (Upstash) ─────────────────────────────────────────────────────────
+let redis = null;
+if (process.env.REDIS_URL) {
+  redis = new Redis(process.env.REDIS_URL, {
+    maxRetriesPerRequest: 3,
+    enableReadyCheck: false,
+    tls: process.env.REDIS_URL.startsWith("rediss://") ? { rejectUnauthorized: false } : undefined,
+  });
+  redis.on("error", e => console.error("[redis] Error:", e.message));
+  redis.on("connect", () => console.log("[redis] Connected to Upstash"));
+}
+
+// Compress JS object → Buffer using zlib deflate
+function rCompress(obj) {
+  return new Promise((res, rej) =>
+    zlib.deflate(JSON.stringify(obj), (e, b) => e ? rej(e) : res(b))
+  );
+}
+// Decompress Buffer → JS object
+function rDecompress(buf) {
+  return new Promise((res, rej) =>
+    zlib.inflate(buf, (e, b) => e ? rej(e) : res(JSON.parse(b.toString())))
+  );
+}
 
 // ─── Category metadata ────────────────────────────────────────────────────────
 const CAT_META = {
@@ -149,15 +176,11 @@ function serializeNode(node) {
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
 let CACHE = null;
-function buildCache() {
-  console.log("[cache] Reading drive_folders.json…");
-  const t0 = Date.now();
-  let records;
-  try { records = readJsonFile(DATA_FILE); } catch(e) {
-    console.error("[cache] Read error:", e.message); return null;
-  }
-  if (!records?.length) { console.error("[cache] Empty"); return null; }
 
+/** Build in-memory app cache from raw records array. */
+function buildCacheFromRecords(records) {
+  if (!records?.length) { console.error("[cache] Empty records"); return null; }
+  const t0 = Date.now();
   const tree = buildTree(records);
   const categories = [];
   let totalFolders = 0, totalSizeGB = 0;
@@ -176,21 +199,14 @@ function buildCache() {
     totalFolders += node.folderCount;
     const sizeGB  = bytesToGB(node.sizeBytes || 0);
     totalSizeGB  += sizeGB;
-
     categories.push({
-      id:        prefix,
-      slug:      meta.shortName.toLowerCase().replace(/[^a-z0-9]+/g,"-"),
-      name:      meta.name,
-      shortName: meta.shortName,
-      hue:       meta.hue,
-      count:     node.folderCount,
-      sizeGB,
-      size:      fmtSize(sizeGB),
-      driveId:   node.id,
-      children:  Object.values(node.children)
-                   .sort((a,b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
-                   .map(serializeNode)
-                   .filter(Boolean),
+      id: prefix, slug: meta.shortName.toLowerCase().replace(/[^a-z0-9]+/g,"-"),
+      name: meta.name, shortName: meta.shortName, hue: meta.hue,
+      count: node.folderCount, sizeGB, size: fmtSize(sizeGB),
+      driveId: node.id,
+      children: Object.values(node.children)
+        .sort((a,b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
+        .map(serializeNode).filter(Boolean),
     });
   }
 
@@ -206,13 +222,23 @@ function buildCache() {
     stats: {
       totalFolders, totalCategories: categories.length,
       totalSizeGB,  totalSize: fmtSize(totalSizeGB),
-      lastUpdated:  new Date().toISOString(),
-      recordCount:  records.length,
+      lastUpdated: new Date().toISOString(),
+      recordCount: records.length,
       fileCount,
     },
   };
   console.log(`[cache] Built in ${Date.now()-t0}ms — ${records.length} records, ${totalFolders} folders`);
   return result;
+}
+
+/** Read drive_folders.json from disk and build cache. */
+function buildCache() {
+  console.log("[cache] Reading drive_folders.json…");
+  let records;
+  try { records = readJsonFile(DATA_FILE); } catch(e) {
+    console.error("[cache] Read error:", e.message); return null;
+  }
+  return buildCacheFromRecords(records);
 }
 
 // ─── Python sync runner ───────────────────────────────────────────────────────
@@ -241,7 +267,7 @@ function runPythonSync() {
       if (txt) { lines.push("[err] " + txt); process.stderr.write("[py-err] " + txt + "\n"); }
     });
 
-    py.on("close", code => {
+    py.on("close", async (code) => {
       const elapsed = Math.round((Date.now() - new Date(started).getTime()) / 1000);
       syncState.isSyncing = false;
       if (code === 0) {
@@ -249,6 +275,20 @@ function runPythonSync() {
         syncState.lastSyncStatus = `ok — ${elapsed}s`;
         logEntry("sync", `Python completed in ${elapsed}s — rebuilding cache`);
         CACHE = buildCache();
+
+        // ─ Persist drive_folders.json to Redis (replaces disk as primary store)
+        if (redis && CACHE) {
+          try {
+            const records = readJsonFile(DATA_FILE);
+            if (records) {
+              const buf = await rCompress(records);
+              await redis.set("drive:folders", buf);
+              const kb = (buf.length / 1024).toFixed(0);
+              logEntry("redis", `drive:folders saved (${kb} KB compressed, ${records.length} records)`);
+            }
+          } catch(e) { logEntry("redis", `Save error: ${e.message}`); }
+        }
+
         resolve({ ok: true, elapsed, lines: lines.slice(-20) });
       } else {
         syncState.lastSyncStatus = `error (exit ${code})`;
@@ -322,10 +362,34 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// ─── Startup ──────────────────────────────────────────────────────────────────
-CACHE = buildCache();
-app.listen(PORT, () => {
-  console.log(`\n[server] http://localhost:${PORT}`);
-  console.log("[server] Sync engine: Python (build_drive_index.py)");
-  console.log("[server] Schedule: 3:00 AM IST + 2:30 PM IST daily");
-});
+
+// \u2500\u2500\u2500 Startup (async: Redis first, disk fallback) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+const startServer = async () => {
+  // 1. Try Redis \u2014 survives redeploys
+  if (redis) {
+    try {
+      const buf = await redis.getBuffer("drive:folders");
+      if (buf) {
+        const records = await rDecompress(buf);
+        CACHE = buildCacheFromRecords(records);
+        console.log(`[redis] Loaded drive:folders \u2014 ${records.length} records`);
+      } else {
+        console.log("[redis] No drive:folders yet \u2014 falling back to disk");
+      }
+    } catch(e) {
+      console.error("[redis] Load error:", e.message, "\u2014 falling back to disk");
+    }
+  }
+
+  // 2. Fallback: read from disk (first deploy / local dev / Redis empty)
+  if (!CACHE) CACHE = buildCache();
+
+  app.listen(PORT, () => {
+    console.log(`\n[server] http://localhost:${PORT}`);
+    console.log("[server] Sync engine: Python (build_drive_index.py)");
+    console.log("[server] Schedule: 3:00 AM IST + 2:30 PM IST daily");
+    console.log(`[server] Redis: ${redis ? "connected" : "disabled (no REDIS_URL)"}`);
+  });
+};
+
+startServer();
