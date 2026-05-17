@@ -1,12 +1,24 @@
 node_modules/
 *.log
 .env
+
+# ── Auth / credentials (never commit) ──────────────────────────────
 token.pickle
 credentials.json
+_credentials.json
+_token_b64.txt
+
+# ── Generated data files (Redis is source of truth) ─────────────────
+drive_folders.json
+CourseLibrary.html
+.size_cache.json
 .size_checkpoint.json
 folder_sizes.json
 structure_full.txt
 main_folder_sizes.txt
+
+# ── Misc ────────────────────────────────────────────────────────────
 rclone-v1.73.1-windows-amd64/
 __pycache__/
 *.pyc
+*.pickle
