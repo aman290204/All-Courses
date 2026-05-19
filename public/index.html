@@ -10,7 +10,8 @@
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;min-width:0}
+html,body{overflow-x:hidden}
 html,body,#root{height:100%}
 :root{
   --bg:#0a0908;
@@ -46,16 +47,79 @@ body::before{content:'';position:fixed;inset:0;opacity:0.025;pointer-events:none
 
 /* ── Mobile ─────────────────────────────────── */
 @media(max-width:640px){
+  body{font-size:14px;overflow-x:hidden}
   .sidebar-nav{display:none!important}
-  .header-brand{padding:0 14px!important;height:52px!important}
-  .header-stats{gap:0!important;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-  .header-stats::-webkit-scrollbar{display:none}
-  .header-stats .stat-box{padding:0 14px!important;min-width:72px}
-  .header-search-row{padding:7px 14px 10px!important;gap:7px!important}
-  .search-in{font-size:0.72rem!important}
   .ctrl-row{display:none!important}
   .updated-label{display:none!important}
-  body{font-size:12px}
+  .desktop-stats{display:none!important}
+
+  /* Header stacks vertically */
+  .header-brand{
+    flex-direction:column!important;align-items:flex-start!important;
+    padding:12px 16px 0!important;height:auto!important;gap:0!important
+  }
+  .brand-left{width:100%}
+  .mobile-hamburger{display:flex!important}
+
+  /* Search row */
+  .header-search-row{
+    padding:10px 16px 12px!important;gap:8px!important
+  }
+  .search-in{
+    font-size:16px!important;height:52px!important;
+    border-radius:14px!important;padding:0 16px 0 42px!important
+  }
+  .search-icon{top:50%!important;left:14px!important}
+
+  /* 2x2 stat grid */
+  .mobile-stats{
+    display:grid!important;
+    grid-template-columns:1fr 1fr;
+    gap:8px;padding:10px 16px 12px;
+    border-top:1px solid var(--border2)
+  }
+  .mobile-stat-card{
+    background:var(--surface);border:1px solid var(--border2);
+    border-radius:10px;padding:10px 12px;
+    display:flex;flex-direction:column;gap:2px
+  }
+  .mobile-stat-val{
+    font-family:'Playfair Display',Georgia,serif;
+    font-size:1.3rem;font-weight:600;color:var(--gold);
+    line-height:1;letter-spacing:-0.02em
+  }
+  .mobile-stat-lbl{
+    font-size:0.6rem;color:var(--text3);
+    text-transform:uppercase;letter-spacing:0.08em;font-family:monospace
+  }
+
+  /* Category cards on mobile */
+  .cat-btn{
+    padding:14px 16px!important;
+    min-height:44px
+  }
+  .cat-name{font-size:1rem!important;white-space:normal!important}
+  .cat-meta{flex-direction:column!important;gap:2px!important}
+  .cat-meta span{display:block}
+
+  /* Touch targets */
+  .cat-go{width:44px!important;height:44px!important;font-size:1rem!important}
+  .go-link{width:32px!important;height:32px!important}
+
+  /* Tree rows bigger */
+  .tree-row{padding-top:8px!important;padding-bottom:8px!important}
+
+  /* Safe area */
+  main{padding-bottom:env(safe-area-inset-bottom)}
+
+  /* Drawer overlay */
+  .drawer-overlay{display:block!important}
+  .drawer{transform:translateX(0)!important}
+}
+@media(min-width:641px){
+  .mobile-stats{display:none!important}
+  .mobile-hamburger{display:none!important}
+  .drawer-overlay{display:none!important}
 }
 </style>
 </head>
@@ -140,19 +204,17 @@ function CatBlock({cat,q,active,forceOpen}){
             whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color 0.15s'}}>
             <Hl text={cat.name} q={q}/>
           </div>
-          <div style={{display:'flex',gap:8,marginTop:3}}>
-            <span style={{fontSize:'0.6rem',color:'var(--text2)',fontFamily:'monospace'}}>{fmtNum(cat.count)} folders</span>
-            <span style={{fontSize:'0.6rem',color:'var(--border)'}}>·</span>
-            <span style={{fontSize:'0.6rem',color:'var(--text2)',fontFamily:'monospace'}}
-              title={cat.sizeSource==='estimate'?'Estimated from folder names':'Measured by rclone'}>
-              {cat.sizeSource==='estimate'?'~':''}{cat.size}
-            </span>
+          <div className="cat-meta" style={{display:'flex',gap:8,marginTop:3,flexWrap:'wrap'}}>
+            <span style={{fontSize:'0.65rem',color:'var(--text2)',fontFamily:'monospace'}}>{fmtNum(cat.count)} folders</span>
+            <span style={{fontSize:'0.65rem',color:'var(--border)'}}>·</span>
+            <span style={{fontSize:'0.65rem',color:'var(--text2)',fontFamily:'monospace'}}>{cat.size}</span>
           </div>
         </div>
         {url&&<a href={url} target="_blank" rel="noopener" onClick={e=>e.stopPropagation()}
-          className="cat-go" title="Open in Google Drive" style={{color:`rgba(${rgb},0.5)`}}>↗</a>}
-        <span style={{flexShrink:0,fontSize:'0.6rem',color:show?`rgba(${rgb},0.7)`:'var(--text3)',
-          transition:'transform 0.2s,color 0.2s',transform:show?'rotate(180deg)':'none',display:'inline-block'}}>⌄</span>
+          className="cat-go" title="Open in Google Drive" style={{color:`rgba(${rgb},0.5)`,minWidth:44,minHeight:44,display:'flex',alignItems:'center',justifyContent:'center'}}>↗</a>}
+        <span style={{flexShrink:0,fontSize:'0.8rem',color:show?`rgba(${rgb},0.7)`:'var(--text3)',
+          transition:'transform 0.2s,color 0.2s',transform:show?'rotate(180deg)':'none',display:'inline-block',
+          width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center'}}>⌄</span>
       </button>
       {show&&(
         <div style={{paddingTop:2,paddingBottom:8,background:'rgba(0,0,0,0.18)'}}>
@@ -181,6 +243,7 @@ function App(){
   const [activeId,setActiveId]=useState('01');
   const [forceOpen,setForceOpen]=useState(false);
   const [syncInfo,setSyncInfo]=useState(null);
+  const [drawerOpen,setDrawerOpen]=useState(false);
   const inputRef=useRef(null);
   const nq=q.trim().toLowerCase();
 
@@ -226,17 +289,62 @@ function App(){
         .stat-lbl{font-size:0.5rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;font-family:monospace}
       `}</style>
 
+      {/* ══ DRAWER (mobile) ══ */}
+      <div className="drawer-overlay" onClick={()=>setDrawerOpen(false)}
+        style={{display:'none',position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:200,backdropFilter:'blur(4px)',
+          opacity:drawerOpen?1:0,pointerEvents:drawerOpen?'all':'none',transition:'opacity 0.25s'}}>
+        <nav className="drawer" onClick={e=>e.stopPropagation()}
+          style={{position:'absolute',left:0,top:0,bottom:0,width:260,
+            background:'var(--bg2)',borderRight:'1px solid var(--border)',
+            transform:drawerOpen?'translateX(0)':'translateX(-100%)',
+            transition:'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
+            overflowY:'auto',display:'flex',flexDirection:'column'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+            padding:'18px 16px',borderBottom:'1px solid var(--border2)'}}>
+            <span style={{fontSize:'0.75rem',color:'var(--text3)',fontFamily:'monospace',
+              textTransform:'uppercase',letterSpacing:'0.12em'}}>Subjects</span>
+            <button onClick={()=>setDrawerOpen(false)}
+              style={{width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',
+                borderRadius:6,border:'1px solid var(--border)',color:'var(--text2)',cursor:'pointer',
+                background:'transparent',fontSize:'1rem'}}>✕</button>
+          </div>
+          <div style={{padding:'8px'}}>
+            {cats.map(cat=>{
+              const act=cat.id===activeId;
+              const rgb=hexRgb(cat.hue);
+              return(
+                <button key={cat.id} className="sb-btn" onClick={()=>{scrollTo(cat.id);setDrawerOpen(false);}}
+                  style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'10px 12px',
+                    borderRadius:8,marginBottom:2,minHeight:44,
+                    background:act?`linear-gradient(90deg,rgba(${rgb},0.12),rgba(${rgb},0.04))`:'transparent'}}>
+                  <span style={{width:6,height:6,borderRadius:'50%',flexShrink:0,
+                    background:act?`rgba(${rgb},0.9)`:'var(--text3)'}}/>
+                  <span style={{fontSize:'0.88rem',flex:1,color:act?'var(--text)':'var(--text2)',fontWeight:act?500:400}}>
+                    {cat.shortName}
+                  </span>
+                  <span style={{fontSize:'0.6rem',color:`rgba(${rgb},0.6)`,fontFamily:'monospace'}}>{cat.id}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+
       {/* ══ HEADER ══ */}
       <header style={{flexShrink:0,background:'rgba(10,9,8,0.96)',backdropFilter:'blur(24px)',
-        borderBottom:'1px solid var(--border)',position:'relative',overflow:'hidden'}}>
+        borderBottom:'1px solid var(--border)',position:'sticky',top:0,zIndex:100,overflow:'hidden'}}>
 
-        {/* Subtle gold line at very top */}
         <div style={{position:'absolute',top:0,left:0,right:0,height:'1px',
           background:'linear-gradient(90deg,transparent 0%,rgba(212,168,83,0.4) 30%,rgba(212,168,83,0.4) 70%,transparent 100%)'}}/>
 
         {/* Brand + stats row */}
         <div className="header-brand" style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 28px',height:62}}>
-          <div style={{display:'flex',alignItems:'center',gap:14}}>
+          <div className="brand-left" style={{display:'flex',alignItems:'center',gap:14}}>
+            {/* Hamburger — mobile only */}
+            <button className="mobile-hamburger" onClick={()=>setDrawerOpen(true)}
+              style={{display:'none',width:40,height:40,alignItems:'center',justifyContent:'center',
+                borderRadius:8,border:'1px solid var(--border)',background:'transparent',
+                color:'var(--text2)',cursor:'pointer',flexShrink:0,fontSize:'1.1rem'}}>☰</button>
             {/* Logo */}
             <div style={{width:32,height:32,borderRadius:8,
               background:'linear-gradient(145deg,rgba(212,168,83,0.12),rgba(212,168,83,0.03))',
@@ -250,38 +358,44 @@ function App(){
               </svg>
             </div>
             <div>
-              <div style={{fontSize:'0.95rem',fontWeight:600,color:'#ede8e0',letterSpacing:'-0.025em',fontFamily:"'Playfair Display',Georgia,serif"}}>
-                Course Library
-              </div>
-              <div style={{fontSize:'0.53rem',color:'var(--text3)',fontFamily:'monospace',marginTop:1,letterSpacing:'0.08em',textTransform:'uppercase'}}>
-                Private Knowledge Vault
-              </div>
-              <div style={{fontSize:'0.48rem',color:'var(--text3)',opacity:0.5,fontFamily:'monospace',marginTop:2,letterSpacing:'0.06em'}}>
-                dev: Aman Agrahari
-              </div>
+              <div style={{fontSize:'0.95rem',fontWeight:600,color:'#ede8e0',letterSpacing:'-0.025em',fontFamily:"'Playfair Display',Georgia,serif"}}>Course Library</div>
+              <div style={{fontSize:'0.53rem',color:'var(--text3)',fontFamily:'monospace',marginTop:1,letterSpacing:'0.08em',textTransform:'uppercase'}}>Private Knowledge Vault</div>
             </div>
           </div>
-
-          {/* Stats */}
-          <div className="header-stats" style={{display:'flex',alignItems:'stretch',gap:0}}>
+          {/* Desktop stats */}
+          <div className="desktop-stats header-stats" style={{display:'flex',alignItems:'stretch',gap:0}}>
             {[
-              {v:stats?.fileCount?fmtNum(stats.fileCount):'—',l:'Files',t:'Total files indexed from Google Drive'},
-              {v:fmtNum(stats?.totalFolders),l:'Folders',t:'Total folders in your Drive'},
-              {v:stats?.totalSize||'—',l:'Total Size',t:'Real sizes measured by Google Drive API'},
-              {v:fmtNum(stats?.totalCategories),l:'Subjects',t:'Top-level subject categories'},
+              {v:stats?.fileCount?fmtNum(stats.fileCount):'—',l:'Files'},
+              {v:fmtNum(stats?.totalFolders),l:'Folders'},
+              {v:stats?.totalSize||'—',l:'Total Size'},
+              {v:fmtNum(stats?.totalCategories),l:'Subjects'},
             ].map((s,i)=>(
-              <div key={i} className="stat-box" title={s.t} style={{padding:'0 20px',textAlign:'center',borderLeft:'1px solid var(--border)',cursor:'help',flexShrink:0}}>
+              <div key={i} className="stat-box" style={{padding:'0 20px',textAlign:'center',borderLeft:'1px solid var(--border)',flexShrink:0}}>
                 <div className="stat-val">{s.v}</div>
                 <div className="stat-lbl">{s.l}</div>
               </div>
             ))}
           </div>
         </div>
+        {/* Mobile 2x2 stat grid */}
+        <div className="mobile-stats">
+          {[
+            {v:stats?.totalSize||'—',l:'Storage'},
+            {v:stats?.fileCount?fmtNum(stats.fileCount):'—',l:'Files'},
+            {v:fmtNum(stats?.totalFolders),l:'Folders'},
+            {v:fmtNum(stats?.totalCategories),l:'Subjects'},
+          ].map((s,i)=>(
+            <div key={i} className="mobile-stat-card">
+              <div className="mobile-stat-val">{s.v}</div>
+              <div className="mobile-stat-lbl">{s.l}</div>
+            </div>
+          ))}
+        </div>
 
         {/* Search + controls row */}
         <div className="header-search-row" style={{display:'flex',alignItems:'center',gap:10,padding:'9px 28px 12px',borderTop:'1px solid var(--border2)'}}>
           <div style={{position:'relative',flex:1,maxWidth:460}}>
-            <svg style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',opacity:0.3,pointerEvents:'none'}}
+            <svg className="search-icon" style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',opacity:0.3,pointerEvents:'none'}}
               width="13" height="13" viewBox="0 0 13 13" fill="none">
               <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
               <line x1="9" y1="9" x2="12" y2="12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
@@ -291,7 +405,7 @@ function App(){
               style={{width:'100%',padding:'8px 32px 8px 30px',background:'var(--surface)',
                 border:'1px solid var(--border)',borderRadius:7,color:'var(--text)',
                 fontSize:'0.75rem',transition:'all 0.2s'}}/>
-            {q&&<button onClick={()=>setQ('')} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',color:'var(--text2)',cursor:'pointer',fontSize:'0.7rem'}}>✕</button>}
+            {q&&<button onClick={()=>setQ('')} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',color:'var(--text2)',cursor:'pointer',fontSize:'1rem',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>}
           </div>
 
           {q&&<span style={{fontSize:'0.62rem',color:'var(--text2)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{visible.length}/{cats.length}</span>}
