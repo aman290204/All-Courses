@@ -293,9 +293,9 @@ function CatBlock({cat,q,active,forceOpen}){
           {cat.id}
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:'0.9rem',fontWeight:600,letterSpacing:'-0.02em',fontFamily:"'Clash Display','Outfit',system-ui",
-            color:show?'var(--text)':`rgba(${rgb},0.75)`,
-            whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color var(--t-fast) ease'}}>
+          <div style={{fontSize:'0.83rem',fontWeight:500,letterSpacing:'-0.015em',
+            color:show?'var(--text)':'var(--text2)',
+            whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color 0.15s'}}>
             <Hl text={cat.name} q={q}/>
           </div>
           <div className="cat-meta" style={{display:'flex',gap:6,marginTop:4,flexWrap:'wrap',alignItems:'center'}}>
@@ -545,20 +545,20 @@ function App(){
           <div className="updated-label" style={{display:'flex',alignItems:'center',gap:6,fontSize:'0.58rem',color:'var(--text3)',fontFamily:'monospace'}}>
             <kbd style={{padding:'1px 5px',borderRadius:4,border:'1px solid rgba(255,255,255,0.1)',fontSize:'0.58rem',background:'rgba(255,255,255,0.04)'}}>⌘ K</kbd>
           </div>
-          {/* Live sync status pill */}
+          {/* Live sync status pill — always visible */}
           {(()=>{
             const st=syncInfo?.lastSyncStatus||'';
             const syncing=st.startsWith('syncing')||st.startsWith('running');
             const err=st.startsWith('err')||st.startsWith('fail');
             const dotColor=syncing?'#e8a838':err?'#e85555':'#27c093';
-            const dotGlow=syncing?'rgba(232,168,56,0.55)':err?'rgba(232,85,85,0.55)':'rgba(39,192,147,0.6)';
+            const dotGlow=syncing?'rgba(232,168,56,0.55)':err?'rgba(232,85,85,0.55)':'rgba(39,192,147,0.65)';
             const label=syncing?'Syncing…':err?'Sync error':'Indexed & Synced';
             const ts=syncInfo?.lastSyncTime||stats?.lastUpdated;
             return(
-              <div className="updated-label" style={{display:'flex',alignItems:'center',gap:6,
+              <div style={{display:'flex',alignItems:'center',gap:6,
                 padding:'3px 10px 3px 8px',borderRadius:999,
-                border:'1px solid rgba(255,255,255,0.06)',
-                background:'rgba(255,255,255,0.03)',
+                border:'1px solid rgba(255,255,255,0.08)',
+                background:'rgba(255,255,255,0.04)',
                 backdropFilter:'blur(8px)',
                 cursor:'default',userSelect:'none',flexShrink:0}}
                 title={ts?`Last sync: ${fmtIST(ts)}`:label}>
@@ -566,10 +566,10 @@ function App(){
                   background:dotColor,
                   boxShadow:`0 0 8px ${dotGlow}`,
                   animation:syncing?'pulse-dot 1s ease infinite':'pulse-dot 3s ease infinite'}}/>
-                <span style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.6)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{label}</span>
+                <span style={{fontSize:'0.6rem',color:'rgba(255,255,255,0.72)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{label}</span>
                 {ts&&<>
-                  <span style={{color:'rgba(255,255,255,0.2)',fontSize:'0.5rem'}}>·</span>
-                  <span style={{fontSize:'0.56rem',color:'rgba(255,255,255,0.38)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{fmtIST(ts)}</span>
+                  <span style={{color:'rgba(255,255,255,0.25)',fontSize:'0.5rem'}}>·</span>
+                  <span style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.45)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{fmtIST(ts)}</span>
                 </>}
               </div>
             );
