@@ -370,6 +370,8 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
         else:
             added = removed = updated = 0
             for change in changes:
+                if "fileId" not in change:
+                    continue  # drive-level change — no fileId, skip safely
                 fid     = change["fileId"]
                 removed_ = change.get("removed", False)
                 f        = change.get("file") or {}
