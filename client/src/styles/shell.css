@@ -194,11 +194,11 @@
     display: none !important;
   }
   .header-brand {
-    padding: 0 18px !important;
-    height: 60px !important;
+    padding: 0 16px !important;
+    height: 56px !important;
   }
   .header-search-row {
-    padding: 10px 18px 12px !important;
+    padding: 8px 16px 10px !important;
   }
   .sidebar-nav {
     display: none !important;
