@@ -430,117 +430,162 @@ body{
   100%{transform:scaleX(1);opacity:0;transform-origin:right}
 }
 
-/* ── Vault Reveal (loader) ── */
+/* ── Vault Reveal (cinematic loader) ── */
 .vault-reveal{
   position:fixed;inset:0;z-index:1000;
   background:
-    radial-gradient(900px 600px at 50% 40%,rgba(212,168,79,0.10),transparent 60%),
-    radial-gradient(700px 500px at 50% 110%,rgba(108,96,217,0.04),transparent 55%),
+    radial-gradient(900px 620px at 50% 42%,rgba(212,168,79,0.085),transparent 62%),
+    radial-gradient(720px 540px at 50% 112%,rgba(108,96,217,0.035),transparent 58%),
     #050506;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:28px;overflow:hidden;
-  animation:vr-fade-out 600ms var(--ease) forwards;
-  animation-delay:2600ms;
+  gap:22px;overflow:hidden;
+  opacity:1;
+  transition:opacity 820ms cubic-bezier(0.45,0,0.55,1);
 }
-@keyframes vr-fade-out{
-  to{opacity:0;visibility:hidden;pointer-events:none}
+.vault-reveal.is-exiting{
+  opacity:0;
+  pointer-events:none;
 }
 
-/* Geometric vault sigil */
-.vr-sigil{
-  width:64px;height:64px;position:relative;
-  animation:vr-sigil-in 900ms var(--ease) both;
+/* Aperture ring sweeps — slow, premium */
+.vr-ring{
+  position:absolute;top:50%;left:50%;
+  width:170px;height:170px;border-radius:50%;
+  border:1px solid rgba(212,168,79,0.14);
+  opacity:0;pointer-events:none;
+  transform:translate(-50%,-50%) scale(0.5);
+  transform-origin:center;
+  animation:vr-ring 4.6s var(--ease-out) 900ms infinite;
 }
-@keyframes vr-sigil-in{
-  from{opacity:0;transform:scale(0.7) rotate(-8deg);filter:blur(8px)}
-  to{opacity:1;transform:scale(1) rotate(0);filter:blur(0)}
+.vr-ring.r2{animation-delay:2900ms}
+@keyframes vr-ring{
+  0%{transform:translate(-50%,-50%) scale(0.5);opacity:0}
+  18%{opacity:0.7}
+  100%{transform:translate(-50%,-50%) scale(2.2);opacity:0}
+}
+
+/* Sigil — slow metallic emergence */
+.vr-sigil{
+  width:72px;height:72px;position:relative;
+  opacity:0;filter:blur(14px) brightness(0.45);
+  transform:scale(0.86);
+  animation:vr-sigil-emerge 1100ms var(--ease-out) 400ms forwards;
+}
+@keyframes vr-sigil-emerge{
+  0%{opacity:0;filter:blur(14px) brightness(0.45);transform:scale(0.86)}
+  55%{opacity:0.9;filter:blur(2px) brightness(0.95);transform:scale(0.97)}
+  100%{opacity:1;filter:blur(0) brightness(1);transform:scale(1)}
 }
 .vr-sigil::before{
-  content:'';position:absolute;inset:-30px;border-radius:50%;
-  background:radial-gradient(circle,rgba(212,168,79,0.22),transparent 65%);
-  animation:vr-pulse 2.4s var(--ease) infinite;
+  content:'';position:absolute;inset:-40px;border-radius:50%;
+  background:radial-gradient(circle,rgba(212,168,79,0.18),transparent 65%);
+  opacity:0;pointer-events:none;
+  animation:vr-halo 3.6s cubic-bezier(0.45,0,0.55,1) 1400ms infinite;
 }
-@keyframes vr-pulse{
-  0%,100%{transform:scale(0.85);opacity:0.6}
-  50%{transform:scale(1.1);opacity:1}
+@keyframes vr-halo{
+  0%,100%{opacity:0.42;transform:scale(0.92)}
+  50%{opacity:0.95;transform:scale(1.08)}
 }
 
-/* Brand name reveal */
+/* Wordmark — luxury watch reveal: letter-spacing relaxes from wide to natural */
 .vr-brand{
   font-family:var(--font-serif);font-weight:600;
-  font-size:2.4rem;letter-spacing:-0.03em;color:var(--text);
-  position:relative;display:flex;gap:0.18em;
+  font-size:2.55rem;color:var(--text);
+  display:flex;align-items:baseline;justify-content:center;
+  white-space:nowrap;
+  margin-top:6px;
 }
-.vr-brand span{
-  display:inline-block;opacity:0;
-  animation:vr-letter 700ms var(--ease) forwards;
+.vr-brand .vr-word{
+  display:inline-block;
+  opacity:0;
+  letter-spacing:0.55em;
+  filter:blur(8px);
+  transform:translateY(2px);
+  animation:vr-wordmark 1200ms var(--ease-out) 1100ms forwards;
+  background:linear-gradient(180deg,#f3efe7 0%,#cfc5b3 100%);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
 }
-.vr-brand span:nth-child(1){animation-delay:300ms}
-.vr-brand span:nth-child(2){animation-delay:380ms}
-.vr-brand span:nth-child(3){animation-delay:460ms}
-.vr-brand span:nth-child(4){animation-delay:540ms}
-.vr-brand span:nth-child(5){animation-delay:620ms}
-.vr-brand span:nth-child(6){animation-delay:700ms}
-.vr-brand span:nth-child(7){animation-delay:780ms}
-@keyframes vr-letter{
-  from{opacity:0;transform:translateY(14px);filter:blur(6px)}
-  to{opacity:1;transform:none;filter:blur(0)}
+.vr-brand .vr-word.w2{animation-delay:1240ms}
+.vr-brand .vr-gap{display:inline-block;width:0.36em}
+@keyframes vr-wordmark{
+  0%{opacity:0;letter-spacing:0.55em;filter:blur(8px);transform:translateY(2px)}
+  55%{opacity:0.85;filter:blur(0);transform:translateY(0)}
+  100%{opacity:1;letter-spacing:-0.018em;filter:blur(0);transform:translateY(0)}
 }
+
+/* Tagline — secondary priority */
 .vr-tagline{
-  font-family:var(--font-sans);font-size:11px;color:var(--text3);
+  font-family:var(--font-sans);font-size:10.5px;color:var(--text3);
   letter-spacing:0.42em;text-transform:uppercase;font-weight:500;
-  opacity:0;animation:vr-tag 800ms var(--ease) forwards;
-  animation-delay:1100ms;
+  opacity:0;transform:translateY(4px);
+  animation:vr-fade-up 700ms var(--ease-out) 1750ms forwards;
 }
-@keyframes vr-tag{
-  from{opacity:0;transform:translateY(6px);letter-spacing:0.6em}
-  to{opacity:1;transform:none;letter-spacing:0.42em}
+@keyframes vr-fade-up{
+  to{opacity:1;transform:translateY(0)}
 }
+
+/* Hairline divider */
 .vr-divider{
-  width:120px;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(212,168,79,0.55),transparent);
-  opacity:0;animation:vr-fade-in 600ms var(--ease) forwards;
-  animation-delay:1400ms;
+  width:88px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(212,168,79,0.42),transparent);
+  opacity:0;
+  animation:vr-fade-in 600ms var(--ease) 2050ms forwards;
+}
+@keyframes vr-fade-in{
+  to{opacity:1}
+}
+
+/* Status narrative — sequential reveal */
+.vr-status-list{
+  display:flex;flex-direction:column;align-items:center;
+  gap:9px;margin-top:6px;min-height:108px;
 }
 .vr-status{
   font-family:var(--font-mono);font-size:9.5px;
-  letter-spacing:0.32em;text-transform:uppercase;color:var(--text3);
-  display:flex;align-items:center;gap:10px;
-  opacity:0;animation:vr-fade-in 600ms var(--ease) forwards;
-  animation-delay:1700ms;
+  letter-spacing:0.34em;text-transform:uppercase;color:var(--text3);
+  opacity:0;transform:translateY(3px);filter:blur(4px);
+  animation:vr-status-in 560ms var(--ease-out) forwards;
 }
-.vr-status::before{
-  content:'';width:6px;height:6px;border-radius:50%;
-  background:var(--gold);box-shadow:0 0 10px rgba(212,168,79,0.7);
-  animation:pulse-dot 1.2s ease infinite;
+.vr-status.s1{animation-delay:2150ms}
+.vr-status.s2{animation-delay:2600ms}
+.vr-status.s3{animation-delay:3100ms}
+.vr-status.s4{
+  animation-delay:3650ms;
+  color:var(--gold-soft);
+  letter-spacing:0.4em;
+  text-shadow:0 0 14px rgba(212,168,79,0.42);
+  font-weight:500;
 }
-@keyframes vr-fade-in{
-  from{opacity:0;transform:translateY(6px)}
-  to{opacity:1;transform:none}
-}
-
-/* The aperture — a thin gold ring sweep behind the sigil */
-.vr-ring{
-  position:absolute;width:160px;height:160px;border-radius:50%;
-  border:1px solid rgba(212,168,79,0.14);
-  animation:vr-ring 3s var(--ease) infinite;
-  pointer-events:none;
-}
-.vr-ring.r2{animation-delay:1s}
-.vr-ring.r3{animation-delay:2s}
-@keyframes vr-ring{
-  0%{transform:scale(0.4);opacity:0}
-  20%{opacity:0.8}
-  100%{transform:scale(1.8);opacity:0}
+@keyframes vr-status-in{
+  from{opacity:0;transform:translateY(3px);filter:blur(4px)}
+  to{opacity:1;transform:translateY(0);filter:blur(0)}
 }
 
-/* Brand title styling */
+/* Developer credit — studio ending beat */
+.vr-credit{
+  position:absolute;
+  bottom:46px;left:50%;
+  transform:translateX(-50%) translateY(4px);
+  font-family:var(--font-sans);font-size:9px;
+  letter-spacing:0.44em;text-transform:uppercase;
+  font-weight:400;
+  color:rgba(212,168,79,0.42);
+  opacity:0;
+  animation:vr-credit-in 900ms var(--ease-out) 4450ms forwards;
+}
+@keyframes vr-credit-in{
+  to{opacity:1;transform:translateX(-50%) translateY(0)}
+}
+
+/* Brand title styling (used in main app) */
 .brand-title{font-family:var(--font-serif);font-feature-settings:'ss01'}
 
 /* Reduced motion */
 @media (prefers-reduced-motion:reduce){
   .vault-reveal,.vault-reveal *,.tree-children > div,.search-wrap.is-active::after{
     animation-duration:0.001ms!important;animation-delay:0ms!important;
+    transition-duration:0.001ms!important;
   }
 }
 </style>
@@ -665,34 +710,39 @@ function CatBlock({cat,q,active,forceOpen,maxSizeGB,focusedId,onFocus}){
   );
 }
 
-function Loader(){
+function Loader({exiting}){
   return(
-    <div className="vault-reveal" role="status" aria-label="Loading Cortexa Vault">
+    <div className={"vault-reveal"+(exiting?" is-exiting":"")} role="status" aria-label="Loading Cortexa Vault">
       <span className="vr-ring"></span>
       <span className="vr-ring r2"></span>
-      <span className="vr-ring r3"></span>
       <div className="vr-sigil">
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden>
+        <svg width="72" height="72" viewBox="0 0 64 64" fill="none" aria-hidden>
           <defs>
             <linearGradient id="vrG1" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#e2bd6c"/>
-              <stop offset="100%" stopColor="#a07830"/>
+              <stop offset="0%" stopColor="#f0c980"/>
+              <stop offset="100%" stopColor="#8d6422"/>
             </linearGradient>
           </defs>
-          <rect x="6" y="6" width="22" height="22" rx="4" fill="url(#vrG1)" opacity="0.96"/>
+          <rect x="6" y="6" width="22" height="22" rx="4" fill="url(#vrG1)" opacity="0.98"/>
           <rect x="36" y="6" width="22" height="22" rx="4" fill="#d4a84f" opacity="0.45"/>
           <rect x="6" y="36" width="22" height="22" rx="4" fill="#d4a84f" opacity="0.45"/>
           <rect x="36" y="36" width="22" height="22" rx="4" fill="#d4a84f" opacity="0.18"/>
         </svg>
       </div>
       <div className="vr-brand" aria-hidden>
-        <span>C</span><span>o</span><span>r</span><span>t</span><span>e</span><span>x</span><span>a</span>
-        <span style={{display:'inline-block',width:'0.32em'}}/>
-        <span>V</span><span>a</span><span>u</span><span>l</span><span>t</span>
+        <span className="vr-word">Cortexa</span>
+        <span className="vr-gap"/>
+        <span className="vr-word w2">Vault</span>
       </div>
       <div className="vr-tagline">Curated for Curious Minds</div>
       <div className="vr-divider"/>
-      <div className="vr-status">Loading the archive</div>
+      <div className="vr-status-list" aria-hidden>
+        <div className="vr-status s1">Indexing archive…</div>
+        <div className="vr-status s2">Restoring knowledge map…</div>
+        <div className="vr-status s3">Establishing secure connection…</div>
+        <div className="vr-status s4">Vault ready</div>
+      </div>
+      <div className="vr-credit">Crafted by Aman Agrahari</div>
     </div>
   );
 }
@@ -701,6 +751,9 @@ function App(){
   const [data,setData]=useState(null);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState(null);
+  const [minTimeReached,setMinTimeReached]=useState(false);
+  const [exiting,setExiting]=useState(false);
+  const [revealed,setRevealed]=useState(false);
   const [q,setQ]=useState('');
   const [activeId,setActiveId]=useState('01');
   const [focusedId,setFocusedId]=useState(null);
@@ -716,7 +769,23 @@ function App(){
       .then(d=>{setData(d);setLoading(false)}).catch(e=>{setError(e.message);setLoading(false)});
   },[]);
 
-  useEffect(()=>{load();fetch('/api/status').then(r=>r.json()).then(setSyncInfo).catch(()=>{});},[]);
+  useEffect(()=>{
+    load();
+    fetch('/api/status').then(r=>r.json()).then(setSyncInfo).catch(()=>{});
+    // Minimum cinematic duration — covers sigil → wordmark → tagline → 4 status lines → credit hold
+    const t=setTimeout(()=>setMinTimeReached(true),4900);
+    return()=>clearTimeout(t);
+  },[]);
+
+  // Coordinate exit dissolve: only after BOTH data ready (or errored) AND cinematic timer done
+  useEffect(()=>{
+    if(revealed||exiting)return;
+    if(!minTimeReached)return;
+    if(loading)return;
+    setExiting(true);
+    const t=setTimeout(()=>setRevealed(true),820);
+    return()=>clearTimeout(t);
+  },[revealed,exiting,minTimeReached,loading]);
   useEffect(()=>{const t=setInterval(()=>fetch('/api/status').then(r=>r.json()).then(setSyncInfo).catch(()=>{}),60000);return()=>clearInterval(t);},[]);
   // ⌘K / Ctrl+K focuses search; Esc exits category focus
   useEffect(()=>{
@@ -751,7 +820,7 @@ function App(){
     }
   }
 
-  if(loading)return <Loader/>;
+  if(!revealed)return <Loader exiting={exiting}/>;
   if(error)return(
     <div style={{height:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16,padding:24}}>
       <div style={{width:48,height:48,borderRadius:12,border:'1px solid rgba(229,115,115,0.22)',background:'rgba(229,115,115,0.06)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--err)',fontSize:'1.4rem'}}>!</div>
