@@ -1,0 +1,204 @@
+/*
+ * global.css — Cortexa Vault global resets, body chrome, scrollbar, focus ring.
+ *
+ * Phase 3 — ported VERBATIM from public/index.html lines 18-128. Includes the
+ * universal reset, body font/background composition, scrollbar styling, focus
+ * ring, selection color, noise overlay, vertical accent line, and the small
+ * library of global keyframes the Shell relies on (spin, fade-up, fade-in,
+ * shimmer, pulse-dot, rise, skel).
+ *
+ * MIGRATION_RULES.md rule 7: this file holds CSS that was originally global
+ * in legacy. Per-component styles live in *.module.css.
+ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(1200px 600px at 50% -200px, rgba(212, 168, 79, 0.07), transparent 60%),
+    radial-gradient(900px 500px at 90% 110%, rgba(108, 96, 217, 0.025), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  text-rendering: optimizeLegibility;
+  transition: background var(--t-slow) var(--ease);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 168, 79, 0.18);
+  border-radius: 99px;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 168, 79, 0.35);
+  background-clip: content-box;
+}
+
+input,
+button {
+  outline: none;
+  font: inherit;
+  border: none;
+  background: none;
+  color: inherit;
+}
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold-soft);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--gold-soft);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(212, 168, 79, 0.28);
+  color: #fff;
+}
+
+/* noise texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.022;
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 220px;
+}
+
+/* Faint vertical accent line down the page center on wide screens */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(212, 168, 79, 0.04) 30%, rgba(212, 168, 79, 0.04) 70%, transparent);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+@media (max-width: 1100px) {
+  body::after {
+    display: none;
+  }
+}
+
+/* Global keyframes — referenced by component CSS modules */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.78);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes skel {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.fade-up {
+  animation: fade-up 0.55s var(--ease-out) both;
+}
+.fade-in {
+  animation: fade-in 0.4s var(--ease-out) both;
+}
+.skel {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.025) 25%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.025) 75%);
+  background-size: 800px 100%;
+  animation: skel 1.6s ease infinite;
+  border-radius: var(--r-sm);
+}
