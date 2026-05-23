@@ -22,6 +22,15 @@ const STATE_FILE = path.join(__dirname, ".sync-state.json");
 const PYTHON_BIN = process.platform === "win32" ? "python" : "python3";
 const SYNC_SECRET = process.env.SYNC_SECRET || "localdev-changeme";
 
+// ─── Static asset directory ──────────────────────────────────────────────────
+// USE_VITE_BUILD=true switches the static-serve root from legacy public/ to
+// the Vite build output at client/dist. Default (unset/false) preserves the
+// legacy build at :3000 for parity comparison per MIGRATION_RULES.md rule 34.
+const USE_VITE_BUILD = process.env.USE_VITE_BUILD === "true";
+const STATIC_DIR = USE_VITE_BUILD
+  ? path.join(__dirname, "client", "dist")
+  : path.join(__dirname, "public");
+
 // ─── Redis (Upstash) ─────────────────────────────────────────────────────────
 let redis = null;
 if (process.env.REDIS_URL) {
@@ -334,7 +343,7 @@ cron.schedule("0 9 * * *", () => {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use(compression());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(STATIC_DIR));
 
 app.get("/api/tree", (req, res) => {
   if (!CACHE) return res.status(503).json({ error: "Data not loaded yet" });
@@ -372,7 +381,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(STATIC_DIR, "index.html"));
 });
 
 
@@ -410,6 +419,7 @@ const startServer = async () => {
     console.log("[server] Sync engine: Python (build_drive_index.py)");
     console.log("[server] Schedule: 3:00 AM IST + 2:30 PM IST daily");
     console.log(`[server] Redis: ${redis ? "connected" : "disabled (no REDIS_URL)"}`);
+    console.log(`[server] Static dir: ${USE_VITE_BUILD ? "client/dist (Vite build)" : "public/ (legacy)"}`);
   });
 };
 
