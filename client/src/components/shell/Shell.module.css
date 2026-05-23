@@ -1,0 +1,32 @@
+/*
+ * Shell.module.css — Top-level layout container.
+ * Legacy reference: public/index.html line 838 (root flex column with
+ * max-width 1480 centered).
+ */
+.shell {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  position: relative;
+  z-index: var(--z-shell);
+  max-width: 1480px;
+  margin: 0 auto;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.main {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
+  position: relative;
+}

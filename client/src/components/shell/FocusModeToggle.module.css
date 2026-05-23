@@ -1,0 +1,16 @@
+/*
+ * FocusModeToggle.module.css — geometry only. Button visuals come from
+ * the shared .ctrl class in shell.css (per legacy line 1007-1011).
+ */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border2);
+  flex-shrink: 0;
+  margin-right: 4px;
+}
