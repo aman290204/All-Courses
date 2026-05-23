@@ -1,0 +1,36 @@
+/*
+ * ArchiveTree.module.css — Outer layout for the main archive surface.
+ *
+ * The cross-cutting `.section-label`, `.scroll-fade`, and `.vault-footer`
+ * primitives live in shell.css. The per-cat styling lives in CatBlock.
+ * This module just stacks them.
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.loading {
+  padding: 80px 40px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.error {
+  padding: 80px 40px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #c08a8a;
+  letter-spacing: 0.06em;
+}

@@ -1,0 +1,11 @@
+/*
+ * Highlight.module.css — <mark> styling for inline search highlighting.
+ * Ported from public/index.html line 619.
+ */
+.mark {
+  background: rgba(212, 168, 79, 0.16);
+  color: var(--gold-soft);
+  padding: 0 2px;
+  border-radius: 3px;
+  font-weight: 500;
+}

@@ -1,0 +1,156 @@
+/*
+ * CatBlock.module.css — Per-category block layout + state-keyed styling.
+ *
+ * Cross-cutting `.cat-block` / `.cat-btn` / `.size-bar` / `.archive-label`
+ * primitives live in archive.css. This module owns the per-instance layout
+ * + the colour transitions that key off the `data-open` attribute via the
+ * `--cat-rgb` and `--accent` custom-property channels (Rule 18 exception).
+ *
+ * Legacy line ranges in public/index.html: 657-720 (`CatBlock` component
+ * — all inline styles converted to data-attribute-keyed CSS).
+ */
+
+.block {
+  border-bottom: 1px solid var(--border2);
+  scroll-margin-top: 120px;
+}
+
+/* Per-cat hover lift — only when not open and not dimmed. */
+.block:hover:not([data-open='true']):not([data-dimmed='true']) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(var(--cat-rgb), 0.10);
+}
+
+.button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 22px 14px 24px;
+  cursor: pointer;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: inherit;
+  transition: background var(--t-mid) var(--ease);
+  font: inherit;
+}
+.block[data-open='true'] .button {
+  background: linear-gradient(
+    100deg,
+    rgba(var(--cat-rgb), 0.07) 0%,
+    rgba(var(--cat-rgb), 0.018) 40%,
+    transparent 70%
+  );
+}
+
+.label {
+  flex-shrink: 0;
+  min-width: 46px;
+  text-align: center;
+  color: var(--text3);
+  border-color: var(--border2);
+  background: rgba(255, 255, 255, 0.015);
+  box-shadow: none;
+  transition: all var(--t-mid) var(--ease);
+}
+.block[data-open='true'] .label {
+  color: rgba(var(--cat-rgb), 0.92);
+  border-color: rgba(var(--cat-rgb), 0.32);
+  background: linear-gradient(
+    135deg,
+    rgba(var(--cat-rgb), 0.10),
+    rgba(var(--cat-rgb), 0.02)
+  );
+  box-shadow: 0 0 18px rgba(var(--cat-rgb), 0.12) inset;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-size: 0.88rem;
+  font-weight: 500;
+  letter-spacing: -0.018em;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    color var(--t-fast) ease,
+    font-size var(--t-mid) var(--ease);
+  font-family: var(--font-sans);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 5px;
+}
+.metaFolders {
+  font-size: 10.5px;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+.metaDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text4);
+  flex-shrink: 0;
+}
+.metaSize {
+  font-size: 10.5px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.go {
+  color: rgba(var(--cat-rgb), 0.55);
+  min-width: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: background var(--t-fast) ease;
+}
+.go:hover {
+  background: rgba(var(--cat-rgb), 0.08);
+}
+
+.chevron {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--text3);
+  transition:
+    transform var(--t-mid) var(--ease),
+    color var(--t-fast) ease;
+  transform: none;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.block[data-open='true'] .chevron {
+  color: rgba(var(--cat-rgb), 0.75);
+  transform: rotate(180deg);
+}
+
+.children {
+  padding-top: 4px;
+  padding-bottom: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  border-top: 1px solid var(--border3);
+}

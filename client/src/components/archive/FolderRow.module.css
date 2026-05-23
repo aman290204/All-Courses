@@ -1,0 +1,90 @@
+/*
+ * FolderRow.module.css — Per-row layout for the recursive folder tree.
+ *
+ * Cross-cutting `.tree-row` hover + `.tree-children` rise animation live in
+ * archive.css (they're shared with the legacy CSS surface). This module owns
+ * the per-instance layout — padding-left keyed off the `--depth` CSS custom
+ * property (Rule 18 exception), per-depth typography keyed off
+ * `data-depth`, and the arrow rotation keyed off `data-open`.
+ *
+ * Legacy line ranges in public/index.html: 622-655 (the `TreeNode` component
+ * — all inline styles converted to attribute-/custom-property-keyed CSS).
+ */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px 6px calc(var(--depth, 0) * 16px + 16px);
+  user-select: none;
+  cursor: default;
+}
+.row[data-has='true'] {
+  cursor: pointer;
+}
+
+.name {
+  flex: 1;
+  font-size: 0.73rem;
+  font-weight: 400;
+  color: var(--text3);
+  line-height: 1.45;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.row[data-depth='0'] .name {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text);
+}
+.row[data-depth='1'] .name {
+  color: var(--text2);
+}
+
+.arrow {
+  font-size: 0.7rem;
+  color: var(--text3);
+  transition: transform var(--t-fast) var(--ease);
+  transform: none;
+  display: inline-block;
+  flex-shrink: 0;
+  line-height: 1;
+  width: 10px;
+  text-align: center;
+}
+.row[data-open='true'] .arrow {
+  transform: rotate(90deg);
+}
+
+.spacer {
+  width: 10px;
+  flex-shrink: 0;
+}
+
+.count {
+  font-size: 10px;
+  color: var(--text4);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.goLink {
+  color: var(--text3);
+  text-decoration: none;
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  transition: color var(--t-fast) ease, background var(--t-fast) ease;
+}
+.goLink:hover {
+  color: var(--gold-soft);
+  background: rgba(212, 168, 79, 0.08);
+}
+
+.children {
+  border-left: 1px solid var(--border2);
+  margin-left: calc(var(--depth, 0) * 16px + 26px);
+}
