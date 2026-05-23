@@ -22,3 +22,10 @@ rclone-v1.73.1-windows-amd64/
 __pycache__/
 *.pyc
 *.pickle
+
+# ── Vite migration: build artifacts and dependencies ───────────────
+client/node_modules/
+client/dist/
+
+# ── Tooling session state (oh-my-claudecode) ───────────────────────
+.omc/state/
