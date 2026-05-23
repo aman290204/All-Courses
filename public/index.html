@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Course Library</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
-<link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -15,125 +15,228 @@
 html,body{overflow-x:hidden}
 html,body,#root{height:100%}
 :root{
-  --bg:#050505;
-  --bg2:#0b0b0b;
-  --surface:#111111;
-  --surface2:#181818;
-  --border:rgba(255,255,255,0.06);
-  --border2:rgba(255,255,255,0.03);
-  --text:#f5f5f5;
-  --text2:rgba(255,255,255,0.62);
-  --text3:rgba(255,255,255,0.32);
+  /* Surfaces */
+  --bg:#060607;
+  --bg2:#0a0a0c;
+  --surface:#101013;
+  --surface2:#16161a;
+  --surface3:#1c1c21;
+
+  /* Borders — hairlines */
+  --border:rgba(255,255,255,0.065);
+  --border2:rgba(255,255,255,0.035);
+  --border3:rgba(255,255,255,0.018);
+
+  /* Text */
+  --text:#f3efe7;
+  --text2:rgba(243,239,231,0.66);
+  --text3:rgba(243,239,231,0.38);
+  --text4:rgba(243,239,231,0.22);
+
+  /* Gold accent */
   --gold:#d4a84f;
-  --gold2:#a07830;
+  --gold-soft:#e2bd6c;
+  --gold-deep:#a07830;
   --gold-glow:rgba(212,168,79,0.14);
   --gold-glow2:rgba(212,168,79,0.06);
-  --radius:10px;
-  --shadow:0 8px 32px rgba(0,0,0,0.55);
-  --ease:cubic-bezier(.22,1,.36,1);
-  --t-fast:180ms;
-  --t-mid:260ms;
+  --gold-line:rgba(212,168,79,0.32);
+
+  /* Semantic */
+  --ok:#34c08a;
+  --warn:#e8a838;
+  --err:#e57373;
+
+  /* Spacing scale (4px grid) */
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:20px;
+  --s-6:24px; --s-7:32px; --s-8:40px; --s-9:48px; --s-10:64px;
+
+  /* Radii */
+  --r-xs:4px; --r-sm:6px; --r-md:8px; --r-lg:10px; --r-xl:14px; --r-2xl:18px;
+
+  /* Shadows */
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md:0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg:0 12px 32px rgba(0,0,0,0.55);
+  --shadow-gold:0 8px 28px rgba(212,168,79,0.12);
+
+  /* Motion */
+  --ease:cubic-bezier(0.22,1,0.36,1);
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+  --t-fast:160ms;
+  --t-mid:240ms;
+  --t-slow:360ms;
   --t-drawer:320ms;
+
+  /* Type */
+  --font-sans:'Inter','SF Pro Text',system-ui,-apple-system,sans-serif;
+  --font-serif:'Fraunces','Playfair Display',Georgia,serif;
+  --font-mono:'JetBrains Mono','SF Mono',ui-monospace,monospace;
 }
-body{font-family:'Inter',system-ui,sans-serif;
-  background:radial-gradient(circle at 50% 0%,rgba(212,168,79,0.05),transparent 45%),#050505;
-  color:var(--text);font-size:13px;overflow:hidden;-webkit-font-smoothing:antialiased}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:rgba(255,255,255,0.02);border-radius:4px}::-webkit-scrollbar-thumb{background:rgba(212,168,79,0.25);border-radius:4px}::-webkit-scrollbar-thumb:hover{background:rgba(212,168,79,0.4)}
-input,button{outline:none;font:inherit;border:none;background:none}
+body{font-family:var(--font-sans);
+  background:
+    radial-gradient(1200px 600px at 50% -200px,rgba(212,168,79,0.07),transparent 60%),
+    radial-gradient(900px 500px at 90% 110%,rgba(108,96,217,0.025),transparent 60%),
+    var(--bg);
+  color:var(--text);font-size:13px;overflow:hidden;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  font-feature-settings:'cv11','ss01','ss03';
+  text-rendering:optimizeLegibility;
+}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(212,168,79,0.18);border-radius:99px;border:1px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:rgba(212,168,79,0.35);background-clip:content-box}
+input,button{outline:none;font:inherit;border:none;background:none;color:inherit}
+button{-webkit-tap-highlight-color:transparent}
 a{text-decoration:none;color:inherit}
 
+/* Visible keyboard focus only */
+:focus-visible{outline:2px solid var(--gold-soft);outline-offset:2px;border-radius:6px}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--gold-soft);outline-offset:2px}
+input.search-in:focus-visible{outline:none}
+
+/* Selection */
+::selection{background:rgba(212,168,79,0.28);color:#fff}
+
 /* noise texture overlay */
-body::before{content:'';position:fixed;inset:0;opacity:0.025;pointer-events:none;z-index:0;mix-blend-mode:overlay;
+body::before{content:'';position:fixed;inset:0;opacity:0.022;pointer-events:none;z-index:0;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  background-size:200px}
+  background-size:220px}
+
+/* Faint vertical accent line down the page center on wide screens */
+body::after{content:'';position:fixed;top:0;bottom:0;left:50%;width:1px;
+  background:linear-gradient(180deg,transparent,rgba(212,168,79,0.04) 30%,rgba(212,168,79,0.04) 70%,transparent);
+  pointer-events:none;z-index:0;opacity:0.6}
+@media(max-width:1100px){body::after{display:none}}
 
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes fade-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes fade-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
 @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
-@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.45;transform:scale(0.78)}}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-.fade-up{animation:fade-up 0.5s ease both}
+.fade-up{animation:fade-up 0.55s var(--ease-out) both}
+.fade-in{animation:fade-in 0.4s var(--ease-out) both}
 
 /* Skeleton shimmer */
 @keyframes skel{0%{background-position:-400px 0}100%{background-position:400px 0}}
-.skel{background:linear-gradient(90deg,rgba(255,255,255,0.03) 25%,rgba(255,255,255,0.07) 50%,rgba(255,255,255,0.03) 75%);background-size:800px 100%;animation:skel 1.4s ease infinite}
+.skel{background:linear-gradient(90deg,rgba(255,255,255,0.025) 25%,rgba(255,255,255,0.06) 50%,rgba(255,255,255,0.025) 75%);background-size:800px 100%;animation:skel 1.6s ease infinite;border-radius:var(--r-sm)}
 
 /* Premium card system */
 .cat-block{
-  background:linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0)) var(--surface);
-  transition:border-color var(--t-mid) var(--ease),background-color var(--t-mid) var(--ease),box-shadow var(--t-mid) var(--ease);
+  background:linear-gradient(180deg,rgba(255,255,255,0.018),rgba(255,255,255,0)) var(--surface);
+  transition:border-color var(--t-mid) var(--ease),background-color var(--t-mid) var(--ease),box-shadow var(--t-mid) var(--ease),transform var(--t-mid) var(--ease);
+  position:relative;
 }
-.cat-block:hover{
-  background-color:var(--surface2);
-  box-shadow:0 8px 28px rgba(0,0,0,0.45);
+.cat-block::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:transparent;transition:background var(--t-mid) var(--ease);
 }
-.cat-btn{transition:all var(--t-mid) var(--ease)!important}
-.cat-btn:active{transform:scale(0.985)!important}
+.cat-block.is-open::before{background:linear-gradient(180deg,var(--accent,var(--gold-line)) 0%,transparent 100%)}
+.cat-btn{transition:all var(--t-mid) var(--ease)!important;border-radius:0}
+.cat-btn:active{transform:scale(0.992)!important}
 
-/* Subject color hover glow */
-.cat-block:hover .cat-btn{
-  filter:brightness(1.06);
-}
+/* Subtle background size bar */
+.size-bar{position:absolute;left:0;right:0;bottom:0;height:1px;background:rgba(255,255,255,0.025);overflow:hidden}
+.size-bar > span{display:block;height:100%;background:linear-gradient(90deg,var(--accent,var(--gold-line)),transparent);opacity:0.55;transition:width var(--t-slow) var(--ease)}
 
 /* Stat cards */
 .mobile-stat-card{
-  background:linear-gradient(180deg,rgba(212,168,79,0.04),transparent);
-  border:1px solid rgba(255,255,255,0.05)!important;
+  background:linear-gradient(180deg,rgba(212,168,79,0.045),rgba(255,255,255,0.005));
+  border:1px solid var(--border2)!important;
+  border-radius:var(--r-md)!important;
 }
 
 /* Search premium */
+.search-wrap{position:relative;flex:1;max-width:520}
 .search-in{
-  background:rgba(255,255,255,0.03)!important;
-  backdrop-filter:blur(14px);
-  border:1px solid rgba(255,255,255,0.06)!important;
-  transition:border-color var(--t-fast) ease,box-shadow var(--t-fast) ease;
+  background:linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012))!important;
+  backdrop-filter:blur(16px);
+  border:1px solid var(--border)!important;
+  transition:border-color var(--t-fast) ease,box-shadow var(--t-fast) ease,background var(--t-fast) ease;
+  font-feature-settings:'tnum';
 }
 .search-in:focus{
-  border-color:rgba(212,168,79,0.4)!important;
-  box-shadow:0 0 0 1px rgba(212,168,79,0.15),0 12px 30px rgba(212,168,79,0.08)!important;
+  border-color:rgba(212,168,79,0.42)!important;
+  box-shadow:0 0 0 3px rgba(212,168,79,0.10),0 12px 30px rgba(212,168,79,0.06)!important;
+  background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))!important;
 }
+.search-in::placeholder{color:var(--text3);font-weight:400}
 
 /* Drawer premium */
 .drawer{
-  background:rgba(8,8,8,0.96)!important;
-  backdrop-filter:blur(20px);
-  border-right:1px solid rgba(255,255,255,0.05)!important;
+  background:rgba(10,10,12,0.97)!important;
+  backdrop-filter:blur(24px);
+  border-right:1px solid var(--border)!important;
   transition:transform var(--t-drawer) var(--ease)!important;
+  box-shadow:8px 0 40px rgba(0,0,0,0.5);
 }
 
 /* Section label */
 .section-label{
-  font-size:0.55rem;color:var(--text3);font-family:monospace;
-  text-transform:uppercase;letter-spacing:0.18em;
-  padding:14px 18px 8px;
+  font-size:9px;color:var(--text3);font-family:var(--font-mono);
+  text-transform:uppercase;letter-spacing:0.22em;
+  padding:18px 24px 12px;font-weight:500;
+}
+.section-label::before{
+  content:'';display:inline-block;width:14px;height:1px;
+  background:var(--gold-line);vertical-align:middle;margin-right:10px;
 }
 
 /* Scroll fade at bottom */
 .scroll-fade{
   position:sticky;bottom:0;left:0;right:0;
-  height:80px;pointer-events:none;
-  background:linear-gradient(180deg,transparent,rgba(5,5,5,0.9));
-  margin-top:-80px;
+  height:96px;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(6,6,7,0.92));
+  margin-top:-96px;
 }
 
-/* Footer — NO parent opacity */
+/* Footer */
 .vault-footer{
-  border-top:1px solid rgba(255,255,255,0.05);
-  padding:40px 24px 32px;
+  border-top:1px solid var(--border2);
+  padding:var(--s-9) var(--s-7) var(--s-10);
   text-align:center;
 }
 .status-dot{
-  width:8px;height:8px;border-radius:999px;
-  background:#27c093;
-  box-shadow:0 0 12px rgba(39,192,147,0.6);
+  width:7px;height:7px;border-radius:999px;
+  background:var(--ok);
+  box-shadow:0 0 12px rgba(52,192,138,0.55);
   display:inline-block;margin-right:6px;
   animation:pulse-dot 3s ease infinite;
   flex-shrink:0;
 }
 
+/* Tree row hover */
+.tree-row{transition:background var(--t-fast) ease,color var(--t-fast) ease;position:relative}
+.tree-row:hover{background:rgba(255,255,255,0.025)}
+.tree-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:0;background:var(--gold-line);transition:width var(--t-fast) ease;opacity:0}
+.tree-row:hover::before{width:2px;opacity:1}
+
+/* Control buttons */
+.ctrl{padding:6px 13px;border-radius:var(--r-sm);border:1px solid var(--border);color:var(--text3);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:0.01em;background:transparent;transition:all var(--t-fast) ease;font-family:var(--font-sans)}
+.ctrl:hover{color:var(--text2);border-color:rgba(255,255,255,0.14);background:var(--surface)}
+.ctrl.on{color:var(--gold);border-color:rgba(212,168,79,0.32);background:var(--gold-glow2)}
+
+/* Sidebar buttons */
+.sb-btn{transition:all var(--t-fast) ease;border:none;cursor:pointer;text-align:left;position:relative}
+.sb-btn:hover{background:rgba(255,255,255,0.035)!important}
+.sb-btn.active-sb{background:linear-gradient(90deg,rgba(212,168,79,0.10),transparent 60%)!important}
+.sb-btn.active-sb::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:2px;background:var(--gold);border-radius:99px}
+
+/* Logo glow */
+.logo-mark{position:relative}
+.logo-mark::after{content:'';position:absolute;inset:-4px;border-radius:12px;background:radial-gradient(circle,rgba(212,168,79,0.18),transparent 70%);opacity:0;transition:opacity var(--t-mid) ease;pointer-events:none}
+.logo-mark:hover::after{opacity:1}
+
+/* Stat values */
+.stat-val{font-family:var(--font-serif);font-size:1.18rem;font-weight:600;color:var(--gold);letter-spacing:-0.025em;line-height:1;font-variant-numeric:tabular-nums;font-feature-settings:'tnum'}
+.stat-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.14em;margin-top:5px;font-family:var(--font-mono);font-weight:500}
+
 /* ── Mobile ─────────────────────────────────── */
 @media(max-width:640px){
   body{font-size:14px;overflow-x:hidden}
+  body::after{display:none}
   .sidebar-nav{display:none!important}
   .ctrl-row{display:none!important}
   .updated-label{display:none!important}
@@ -142,46 +245,45 @@ body::before{content:'';position:fixed;inset:0;opacity:0.025;pointer-events:none
   /* Header stacks vertically */
   .header-brand{
     flex-direction:column!important;align-items:flex-start!important;
-    padding:12px 16px 0!important;height:auto!important;gap:0!important
+    padding:14px 18px 0!important;height:auto!important;gap:0!important
   }
   .brand-left{width:100%}
   .mobile-hamburger{display:flex!important}
 
   /* Search row */
   .header-search-row{
-    padding:10px 16px 12px!important;gap:8px!important
+    padding:12px 18px 14px!important;gap:8px!important
   }
   .search-in{
-    font-size:16px!important;height:44px!important;
-    border-radius:12px!important;padding:0 14px 0 40px!important
+    font-size:16px!important;height:46px!important;
+    border-radius:12px!important;padding:0 16px 0 42px!important
   }
-  .search-icon{top:50%!important;left:13px!important}
+  .search-icon{top:50%!important;left:14px!important}
 
   /* 2x2 stat grid */
   .mobile-stats{
     display:grid!important;
     grid-template-columns:1fr 1fr;
-    gap:8px;padding:10px 16px 12px;
-    border-top:1px solid var(--border2)
+    gap:8px;padding:10px 18px 14px;
+    border-top:1px solid var(--border3)
   }
   .mobile-stat-card{
-    background:var(--surface);border:1px solid var(--border2);
-    border-radius:10px;padding:10px 12px;
-    display:flex;flex-direction:column;gap:2px
+    padding:12px 14px;
+    display:flex;flex-direction:column;gap:3px
   }
   .mobile-stat-val{
-    font-family:'Playfair Display',Georgia,serif;
-    font-size:1.3rem;font-weight:600;color:var(--gold);
-    line-height:1;letter-spacing:-0.02em
+    font-family:var(--font-serif);
+    font-size:1.35rem;font-weight:600;color:var(--gold);
+    line-height:1;letter-spacing:-0.025em;font-variant-numeric:tabular-nums
   }
   .mobile-stat-lbl{
-    font-size:0.6rem;color:var(--text3);
-    text-transform:uppercase;letter-spacing:0.08em;font-family:monospace
+    font-size:9px;color:var(--text3);
+    text-transform:uppercase;letter-spacing:0.12em;font-family:var(--font-mono);font-weight:500
   }
 
   /* Category cards on mobile */
   .cat-btn{
-    padding:14px 16px!important;
+    padding:16px 18px!important;
     min-height:44px
   }
   .cat-name{font-size:1rem!important;white-space:normal!important}
@@ -193,7 +295,7 @@ body::before{content:'';position:fixed;inset:0;opacity:0.025;pointer-events:none
   .go-link{width:32px!important;height:32px!important}
 
   /* Tree rows bigger */
-  .tree-row{padding-top:8px!important;padding-bottom:8px!important}
+  .tree-row{padding-top:9px!important;padding-bottom:9px!important}
 
   /* Safe area */
   main{padding-bottom:env(safe-area-inset-bottom)}
@@ -226,7 +328,7 @@ function Hl({text,q}){
   if(!q)return <>{text}</>;
   const i=text.toLowerCase().indexOf(q);
   if(i===-1)return <>{text}</>;
-  return <>{text.slice(0,i)}<span style={{color:'var(--gold)',fontWeight:500}}>{text.slice(i,i+q.length)}</span>{text.slice(i+q.length)}</>;
+  return <>{text.slice(0,i)}<mark style={{background:'rgba(212,168,79,0.16)',color:'var(--gold-soft)',padding:'0 2px',borderRadius:3,fontWeight:500}}>{text.slice(i,i+q.length)}</mark>{text.slice(i+q.length)}</>;
 }
 
 function TreeNode({node,depth,q,forceOpen}){
@@ -237,25 +339,26 @@ function TreeNode({node,depth,q,forceOpen}){
   const [open,setOpen]=useState(false);
   const isOpen=forceOpen||open||(!!q&&cm);
   if(!vis)return null;
-  const pad=depth*18+14;
+  const pad=depth*16+16;
   const url=node.id?`https://drive.google.com/drive/folders/${node.id}`:null;
   return(
     <div>
       <div className="tree-row" onClick={()=>has&&setOpen(p=>!p)}
-        style={{display:'flex',alignItems:'center',gap:6,padding:`5px 14px 5px ${pad}px`,cursor:has?'pointer':'default',userSelect:'none'}}>
-        <span style={{flex:1,fontSize:depth===0?'0.76rem':'0.71rem',fontWeight:depth===0?500:400,
-          color:depth===0?'var(--text)':depth===1?'var(--text2)':'rgba(170,162,154,0.9)',lineHeight:1.4,
-          display:'flex',alignItems:'center',gap:5}}>
-          {has&&<span style={{fontSize:'0.65rem',color:'rgba(255,255,255,0.35)',
-            transition:'transform 0.15s',transform:isOpen?'rotate(90deg)':'none',
-            display:'inline-block',flexShrink:0,lineHeight:1}}>›</span>}
+        style={{display:'flex',alignItems:'center',gap:6,padding:`6px 16px 6px ${pad}px`,cursor:has?'pointer':'default',userSelect:'none'}}>
+        <span style={{flex:1,fontSize:depth===0?'0.78rem':'0.73rem',fontWeight:depth===0?500:400,
+          color:depth===0?'var(--text)':depth===1?'var(--text2)':'var(--text3)',lineHeight:1.45,
+          display:'flex',alignItems:'center',gap:6}}>
+          {has&&<span style={{fontSize:'0.7rem',color:'var(--text3)',
+            transition:'transform var(--t-fast) var(--ease)',transform:isOpen?'rotate(90deg)':'none',
+            display:'inline-block',flexShrink:0,lineHeight:1,width:10,textAlign:'center'}}>›</span>}
+          {!has&&<span style={{width:10,flexShrink:0}}/>}
           <Hl text={node.name} q={q}/>
         </span>
-        {has&&<span style={{fontSize:'0.58rem',color:'var(--text3)',fontFamily:'monospace',flexShrink:0}}>{node.children.length}</span>}
-        {url&&<a href={url} target="_blank" rel="noopener" onClick={e=>e.stopPropagation()} className="go-link" title="Open in Drive">↗</a>}
+        {has&&<span style={{fontSize:'10px',color:'var(--text4)',fontFamily:'var(--font-mono)',flexShrink:0,fontVariantNumeric:'tabular-nums'}}>{node.children.length}</span>}
+        {url&&<a href={url} target="_blank" rel="noopener" onClick={e=>e.stopPropagation()} className="go-link" title="Open in Drive" aria-label="Open in Google Drive">↗</a>}
       </div>
       {has&&isOpen&&(
-        <div style={{borderLeft:'1px solid var(--border2)',marginLeft:pad+12}}>
+        <div style={{borderLeft:'1px solid var(--border2)',marginLeft:pad+10}}>
           {node.children.map((c,i)=><TreeNode key={i} node={c} depth={depth+1} q={q} forceOpen={forceOpen}/>)}
         </div>
       )}
@@ -263,7 +366,7 @@ function TreeNode({node,depth,q,forceOpen}){
   );
 }
 
-function CatBlock({cat,q,active,forceOpen}){
+function CatBlock({cat,q,active,forceOpen,maxSizeGB}){
   const [open,setOpen]=useState(false);
   const [hovered,setHovered]=useState(false);
   const vis=catHasMatch(cat,q);
@@ -271,46 +374,54 @@ function CatBlock({cat,q,active,forceOpen}){
   if(!vis)return null;
   const rgb=hexRgb(cat.hue);
   const url=cat.driveId?`https://drive.google.com/drive/folders/${cat.driveId}`:null;
-  // Dynamic accent glow on hover (Phase 13 + 14)
-  const hoverStyle=hovered?{
-    transform:'translateY(-2px)',
-    boxShadow:`0 12px 30px rgba(0,0,0,0.45), 0 0 0 1px rgba(${rgb},0.08), 0 0 30px rgba(${rgb},0.07)`,
+  const sizePct=maxSizeGB?Math.min(100,Math.max(4,(cat.sizeGB||0)/maxSizeGB*100)):0;
+  const hoverStyle=hovered&&!show?{
+    transform:'translateY(-1px)',
+    boxShadow:`0 10px 26px rgba(0,0,0,0.4), 0 0 0 1px rgba(${rgb},0.10)`,
   }:{};
   return(
-    <div id={`cat-${cat.id}`} className="cat-block"
+    <div id={`cat-${cat.id}`} className={`cat-block${show?' is-open':''}`}
       onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}
-      style={{borderBottom:'1px solid var(--border2)',scrollMarginTop:110,transition:'transform var(--t-mid) var(--ease),box-shadow var(--t-mid) var(--ease)',...hoverStyle}}>
+      style={{borderBottom:'1px solid var(--border2)',scrollMarginTop:120,
+        '--accent':`rgba(${rgb},0.55)`,
+        ...hoverStyle}}>
       <button onClick={()=>setOpen(p=>!p)} className="cat-btn"
-        style={{width:'100%',display:'flex',alignItems:'center',gap:12,padding:'10px 18px',cursor:'pointer',textAlign:'left',
-          background:show?`linear-gradient(100deg,rgba(${rgb},0.06) 0%,rgba(${rgb},0.015) 40%,transparent 70%)`:'transparent',
-          borderLeft:show?`2px solid rgba(${rgb},0.65)`:'2px solid transparent',
-          transition:'all 0.2s ease'}}>
-        <div style={{flexShrink:0,width:30,height:30,borderRadius:7,
-          background:`linear-gradient(135deg,rgba(${rgb},0.15),rgba(${rgb},0.05))`,
-          border:`1px solid rgba(${rgb},0.2)`,
+        aria-expanded={show}
+        style={{width:'100%',display:'flex',alignItems:'center',gap:14,padding:'14px 22px 14px 24px',cursor:'pointer',textAlign:'left',
+          background:show?`linear-gradient(100deg,rgba(${rgb},0.07) 0%,rgba(${rgb},0.018) 40%,transparent 70%)`:'transparent',
+          transition:'background var(--t-mid) var(--ease)'}}>
+        <div style={{flexShrink:0,width:34,height:34,borderRadius:8,
+          background:`linear-gradient(135deg,rgba(${rgb},0.18),rgba(${rgb},0.05))`,
+          border:`1px solid rgba(${rgb},0.22)`,
           display:'flex',alignItems:'center',justifyContent:'center',
-          fontSize:'0.58rem',fontWeight:700,color:`rgba(${rgb},0.9)`,fontFamily:'monospace',letterSpacing:'0.03em'}}>
+          fontSize:'10px',fontWeight:600,color:`rgba(${rgb},0.92)`,fontFamily:'var(--font-mono)',letterSpacing:'0.04em',
+          boxShadow:show?`0 0 18px rgba(${rgb},0.15) inset`:'none',
+          transition:'box-shadow var(--t-mid) var(--ease)'}}>
           {cat.id}
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:'0.83rem',fontWeight:500,letterSpacing:'-0.015em',
-            color:show?'var(--text)':'var(--text2)',
-            whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color 0.15s'}}>
+          <div className="cat-name" style={{fontSize:'0.88rem',fontWeight:500,letterSpacing:'-0.018em',
+            color:show?'var(--text)':'var(--text)',
+            whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color var(--t-fast) ease',
+            fontFamily:'var(--font-sans)'}}>
             <Hl text={cat.name} q={q}/>
           </div>
-          <div className="cat-meta" style={{display:'flex',flexDirection:'column',gap:3,marginTop:4}}>
-            <span style={{fontSize:'0.68rem',color:'var(--text2)',fontFamily:'monospace',fontVariantNumeric:'tabular-nums',letterSpacing:'-0.01em'}}>{fmtNum(cat.count)} folders</span>
-            <span style={{fontSize:'0.65rem',color:'var(--text3)',fontFamily:'monospace',fontVariantNumeric:'tabular-nums'}}>{cat.size}</span>
+          <div className="cat-meta" style={{display:'flex',alignItems:'center',gap:10,marginTop:5}}>
+            <span style={{fontSize:'10.5px',color:'var(--text2)',fontFamily:'var(--font-mono)',fontVariantNumeric:'tabular-nums',letterSpacing:'0.01em'}}>{fmtNum(cat.count)} folders</span>
+            <span style={{width:3,height:3,borderRadius:'50%',background:'var(--text4)',flexShrink:0}}/>
+            <span style={{fontSize:'10.5px',color:'var(--text3)',fontFamily:'var(--font-mono)',fontVariantNumeric:'tabular-nums'}}>{cat.size}</span>
           </div>
         </div>
         {url&&<a href={url} target="_blank" rel="noopener" onClick={e=>e.stopPropagation()}
-          className="cat-go" title="Open in Google Drive" style={{color:`rgba(${rgb},0.5)`,minWidth:44,minHeight:44,display:'flex',alignItems:'center',justifyContent:'center'}}>↗</a>}
-        <span style={{flexShrink:0,fontSize:'0.8rem',color:show?`rgba(${rgb},0.7)`:'var(--text3)',
-          transition:'transform 0.2s,color 0.2s',transform:show?'rotate(180deg)':'none',display:'inline-block',
-          width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center'}}>⌄</span>
+          className="cat-go" title="Open in Google Drive" aria-label="Open in Google Drive"
+          style={{color:`rgba(${rgb},0.55)`,minWidth:32,minHeight:32,display:'flex',alignItems:'center',justifyContent:'center'}}>↗</a>}
+        <span aria-hidden style={{flexShrink:0,fontSize:'0.85rem',color:show?`rgba(${rgb},0.75)`:'var(--text3)',
+          transition:'transform var(--t-mid) var(--ease),color var(--t-fast) ease',transform:show?'rotate(180deg)':'none',
+          width:28,height:28,display:'flex',alignItems:'center',justifyContent:'center'}}>⌄</span>
       </button>
+      {sizePct>0&&<div className="size-bar"><span style={{width:`${sizePct}%`}}/></div>}
       {show&&(
-        <div style={{paddingTop:2,paddingBottom:8,background:'rgba(0,0,0,0.18)'}}>
+        <div style={{paddingTop:4,paddingBottom:10,background:'rgba(0,0,0,0.22)',borderTop:'1px solid var(--border3)'}}>
           {cat.children?.map((n,i)=><TreeNode key={i} node={n} depth={0} q={q} forceOpen={forceOpen}/>)}
         </div>
       )}
@@ -319,37 +430,49 @@ function CatBlock({cat,q,active,forceOpen}){
 }
 
 function Loader(){
-  const rows=[1,2,3,4,5,6,7];
+  const rows=[1,2,3,4,5,6,7,8];
   return(
-    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:'var(--bg)'}}>
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:'var(--bg)',maxWidth:1480,margin:'0 auto'}}>
       {/* Header skeleton */}
-      <div style={{height:62,borderBottom:'1px solid var(--border)',padding:'0 28px',display:'flex',alignItems:'center',gap:16}}>
-        <div className="skel" style={{width:32,height:32,borderRadius:8}}/>
+      <div style={{height:68,borderBottom:'1px solid var(--border)',padding:'0 32px',display:'flex',alignItems:'center',gap:18}}>
+        <div className="skel" style={{width:36,height:36,borderRadius:9}}/>
         <div style={{display:'flex',flexDirection:'column',gap:6}}>
-          <div className="skel" style={{width:120,height:12,borderRadius:4}}/>
-          <div className="skel" style={{width:80,height:8,borderRadius:4}}/>
+          <div className="skel" style={{width:140,height:13,borderRadius:4}}/>
+          <div className="skel" style={{width:96,height:8,borderRadius:4}}/>
         </div>
-        <div style={{marginLeft:'auto',display:'flex',gap:16}}>
-          {[60,50,70,44].map((w,i)=>(<div key={i} className="skel" style={{width:w,height:28,borderRadius:6}}/>))}
+        <div style={{marginLeft:'auto',display:'flex',gap:24}}>
+          {[60,52,72,46].map((w,i)=>(
+            <div key={i} style={{display:'flex',flexDirection:'column',gap:7,alignItems:'center'}}>
+              <div className="skel" style={{width:w,height:18,borderRadius:4}}/>
+              <div className="skel" style={{width:w*0.6,height:7,borderRadius:4}}/>
+            </div>
+          ))}
         </div>
       </div>
       {/* Search skeleton */}
-      <div style={{padding:'10px 28px 12px',borderBottom:'1px solid var(--border2)'}}>
-        <div className="skel" style={{height:36,borderRadius:7,maxWidth:460}}/>
+      <div style={{padding:'12px 32px 14px',borderBottom:'1px solid var(--border2)',display:'flex',gap:10,alignItems:'center'}}>
+        <div className="skel" style={{height:36,borderRadius:7,maxWidth:480,flex:1}}/>
+        <div className="skel" style={{height:24,width:120,borderRadius:99}}/>
+        <div style={{flex:1}}/>
+        <div className="skel" style={{height:24,width:64,borderRadius:6}}/>
+        <div className="skel" style={{height:24,width:64,borderRadius:6}}/>
       </div>
       {/* Body skeleton */}
       <div style={{display:'flex',flex:1,minHeight:0}}>
-        <div style={{width:220,borderRight:'1px solid var(--border)',padding:'14px 8px',flexShrink:0}}>
-          {[80,65,72,60,68,55,70].map((w,i)=>(<div key={i} className="skel" style={{width:`${w}%`,height:28,borderRadius:6,marginBottom:2}}/>))}
+        <div style={{width:248,borderRight:'1px solid var(--border)',padding:'18px 10px',flexShrink:0}}>
+          <div className="skel" style={{width:80,height:8,borderRadius:4,marginBottom:14,marginLeft:10}}/>
+          {[82,68,75,62,70,58,72,64].map((w,i)=>(<div key={i} className="skel" style={{width:`${w}%`,height:28,borderRadius:6,marginBottom:3}}/>))}
         </div>
-        <div style={{flex:1,padding:'0 0 0 0'}}>
+        <div style={{flex:1}}>
+          <div className="skel" style={{width:120,height:9,borderRadius:4,margin:'18px 24px 14px'}}/>
           {rows.map(i=>(
-            <div key={i} style={{padding:'13px 18px',borderBottom:'1px solid var(--border2)',display:'flex',alignItems:'center',gap:12}}>
-              <div className="skel" style={{width:30,height:30,borderRadius:7,flexShrink:0}}/>
+            <div key={i} style={{padding:'14px 22px',borderBottom:'1px solid var(--border2)',display:'flex',alignItems:'center',gap:14}}>
+              <div className="skel" style={{width:34,height:34,borderRadius:8,flexShrink:0}}/>
               <div style={{flex:1}}>
-                <div className="skel" style={{width:`${40+i*7}%`,height:13,borderRadius:4,marginBottom:6}}/>
-                <div className="skel" style={{width:'30%',height:9,borderRadius:4}}/>
+                <div className="skel" style={{width:`${38+i*6}%`,height:13,borderRadius:4,marginBottom:7}}/>
+                <div className="skel" style={{width:'28%',height:9,borderRadius:4}}/>
               </div>
+              <div className="skel" style={{width:24,height:24,borderRadius:6}}/>
             </div>
           ))}
         </div>
@@ -388,71 +511,68 @@ function App(){
   const visible=useMemo(()=>(data?.categories||[]).filter(c=>catHasMatch(c,nq)),[data,nq]);
   const stats=data?.stats;
   const cats=data?.categories||[];
+  const maxSizeGB=useMemo(()=>cats.reduce((m,c)=>Math.max(m,c.sizeGB||0),0),[cats]);
 
   function scrollTo(id){setActiveId(id);document.getElementById(`cat-${id}`)?.scrollIntoView({behavior:'smooth',block:'start'});}
 
   if(loading)return <Loader/>;
   if(error)return(
-    <div style={{height:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}>
-      <p style={{color:'#8a4a4a',fontSize:'0.8rem'}}>{error}</p>
-      <button onClick={load} style={{padding:'7px 20px',borderRadius:6,border:'1px solid var(--border)',color:'var(--text2)',cursor:'pointer',background:'var(--surface)'}}>Retry</button>
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16,padding:24}}>
+      <div style={{width:48,height:48,borderRadius:12,border:'1px solid rgba(229,115,115,0.22)',background:'rgba(229,115,115,0.06)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--err)',fontSize:'1.4rem'}}>!</div>
+      <div style={{textAlign:'center'}}>
+        <div style={{fontFamily:'var(--font-serif)',fontSize:'1.1rem',color:'var(--text)',marginBottom:4}}>Couldn't load the vault</div>
+        <div style={{color:'var(--text3)',fontSize:'0.72rem',fontFamily:'var(--font-mono)'}}>{error}</div>
+      </div>
+      <button onClick={load} style={{padding:'9px 22px',borderRadius:7,border:'1px solid var(--border)',color:'var(--text)',cursor:'pointer',background:'var(--surface)',fontSize:'0.75rem',letterSpacing:'0.02em',transition:'all var(--t-fast) ease'}}>Retry</button>
     </div>
   );
 
   return(
-    <div className="fade-up" style={{fontFamily:"'Inter',system-ui,sans-serif",background:'var(--bg)',color:'var(--text)',height:'100vh',display:'flex',flexDirection:'column',fontSize:13,position:'relative',zIndex:1,maxWidth:1480,margin:'0 auto'}}>
+    <div className="fade-up" style={{fontFamily:'var(--font-sans)',background:'var(--bg)',color:'var(--text)',height:'100vh',display:'flex',flexDirection:'column',fontSize:13,position:'relative',zIndex:1,maxWidth:1480,margin:'0 auto'}}>
       <style>{`
-        .tree-row{transition:background 0.1s}.tree-row:hover{background:rgba(255,255,255,0.03)}
-        .cat-btn:hover{filter:brightness(1.05)}
-        .go-link{flex-shrink:0;opacity:0;transition:opacity 0.15s;width:18px;height:16px;display:inline-flex;align-items:center;justify-content:center;border-radius:3px;border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.3);font-size:0.6rem}
-        .tree-row:hover .go-link{opacity:1}.go-link:hover{color:var(--gold)!important;border-color:rgba(212,168,83,0.3)!important}
-        .cat-go{flex-shrink:0;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:5px;border:1px solid rgba(255,255,255,0.06);font-size:0.7rem;transition:all 0.15s}
-        .cat-go:hover{color:var(--gold)!important;border-color:rgba(212,168,83,0.3)!important;background:rgba(212,168,83,0.08)}
-        .sb-btn{transition:all 0.12s;border:none;cursor:pointer;text-align:left}.sb-btn:hover{background:rgba(255,255,255,0.04)!important}
-        .ctrl{padding:5px 13px;border-radius:5px;border:1px solid var(--border);color:var(--text3);font-size:0.67rem;font-weight:450;cursor:pointer;letter-spacing:0.01em;background:transparent;transition:all 0.15s}
-        .ctrl:hover{color:var(--text2);border-color:rgba(255,255,255,0.12);background:var(--surface)}
-        .ctrl.on{color:var(--gold);border-color:rgba(212,168,83,0.3);background:var(--gold-glow2)}
-        .search-in::placeholder{color:var(--text3)}.search-in:focus{border-color:rgba(212,168,83,0.3)!important;box-shadow:0 0 0 3px rgba(212,168,83,0.06)}
+        .cat-btn:hover{filter:brightness(1.04)}
+        .go-link{flex-shrink:0;opacity:0;transition:opacity var(--t-fast) ease,color var(--t-fast) ease,border-color var(--t-fast) ease;width:20px;height:18px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid var(--border);color:var(--text3);font-size:11px}
+        .tree-row:hover .go-link{opacity:1}
+        .go-link:hover{color:var(--gold)!important;border-color:var(--gold-line)!important;background:var(--gold-glow2)}
+        .cat-go{flex-shrink:0;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid var(--border);font-size:0.78rem;transition:all var(--t-fast) ease}
+        .cat-go:hover{color:var(--gold)!important;border-color:var(--gold-line)!important;background:var(--gold-glow2)}
         .sidebar::-webkit-scrollbar{width:0}
-        .stat-val{font-family:'Clash Display','Outfit',Georgia,serif;font-size:1.15rem;font-weight:600;color:var(--gold);letter-spacing:-0.03em;line-height:1;font-variant-numeric:tabular-nums}
-        .stat-lbl{font-size:0.48rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.12em;margin-top:4px;font-family:monospace}
-        .sb-btn.active-sb{background:linear-gradient(90deg,rgba(212,168,79,0.12),transparent)!important;border-left:2px solid rgba(212,168,79,0.82)!important}
+        .brand-title{font-family:var(--font-serif);font-feature-settings:'ss01'}
       `}</style>
 
       {/* ══ DRAWER (mobile) ══ */}
       <div className="drawer-overlay" onClick={()=>setDrawerOpen(false)}
-        style={{display:'none',position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:200,backdropFilter:'blur(4px)',
-          opacity:drawerOpen?1:0,pointerEvents:drawerOpen?'all':'none',transition:'opacity 0.25s'}}>
-        <nav className="drawer" onClick={e=>e.stopPropagation()}
-          style={{position:'absolute',left:0,top:0,bottom:0,width:260,
-            background:'var(--bg2)',borderRight:'1px solid var(--border)',
+        style={{display:'none',position:'fixed',inset:0,background:'rgba(0,0,0,0.65)',zIndex:200,backdropFilter:'blur(6px)',
+          opacity:drawerOpen?1:0,pointerEvents:drawerOpen?'all':'none',transition:'opacity var(--t-mid) ease'}}>
+        <nav className="drawer" onClick={e=>e.stopPropagation()} aria-label="Subject navigation"
+          style={{position:'absolute',left:0,top:0,bottom:0,width:268,
             transform:drawerOpen?'translateX(0)':'translateX(-100%)',
-            transition:'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
             overflowY:'auto',display:'flex',flexDirection:'column'}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
-            padding:'18px 16px',borderBottom:'1px solid var(--border2)'}}>
-            <span style={{fontSize:'0.75rem',color:'var(--text3)',fontFamily:'monospace',
-              textTransform:'uppercase',letterSpacing:'0.12em'}}>Subjects</span>
-            <button onClick={()=>setDrawerOpen(false)}
-              style={{width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',
-                borderRadius:6,border:'1px solid var(--border)',color:'var(--text2)',cursor:'pointer',
-                background:'transparent',fontSize:'1rem'}}>✕</button>
+            padding:'20px 18px',borderBottom:'1px solid var(--border2)'}}>
+            <span style={{fontSize:'10px',color:'var(--text3)',fontFamily:'var(--font-mono)',
+              textTransform:'uppercase',letterSpacing:'0.22em',fontWeight:500}}>Subjects</span>
+            <button onClick={()=>setDrawerOpen(false)} aria-label="Close menu"
+              style={{width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',
+                borderRadius:8,border:'1px solid var(--border)',color:'var(--text2)',cursor:'pointer',
+                background:'var(--surface)',fontSize:'0.95rem'}}>✕</button>
           </div>
-          <div style={{padding:'8px'}}>
+          <div style={{padding:'10px'}}>
             {cats.map(cat=>{
               const act=cat.id===activeId;
               const rgb=hexRgb(cat.hue);
               return(
                 <button key={cat.id} className="sb-btn" onClick={()=>{scrollTo(cat.id);setDrawerOpen(false);}}
-                  style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'10px 12px',
-                    borderRadius:8,marginBottom:2,minHeight:44,
-                    background:act?`linear-gradient(90deg,rgba(${rgb},0.12),rgba(${rgb},0.04))`:'transparent'}}>
-                  <span style={{width:6,height:6,borderRadius:'50%',flexShrink:0,
-                    background:act?`rgba(${rgb},0.9)`:'var(--text3)'}}/>
-                  <span style={{fontSize:'0.88rem',flex:1,color:act?'var(--text)':'var(--text2)',fontWeight:act?500:400}}>
+                  style={{width:'100%',display:'flex',alignItems:'center',gap:11,padding:'11px 13px',
+                    borderRadius:8,marginBottom:2,minHeight:46,
+                    background:act?`linear-gradient(90deg,rgba(${rgb},0.13),rgba(${rgb},0.03))`:'transparent'}}>
+                  <span style={{width:7,height:7,borderRadius:'50%',flexShrink:0,
+                    background:act?`rgba(${rgb},0.95)`:'var(--text4)',
+                    boxShadow:act?`0 0 8px rgba(${rgb},0.55)`:'none'}}/>
+                  <span style={{fontSize:'0.9rem',flex:1,color:act?'var(--text)':'var(--text2)',fontWeight:act?500:400}}>
                     {cat.shortName}
                   </span>
-                  <span style={{fontSize:'0.6rem',color:`rgba(${rgb},0.6)`,fontFamily:'monospace'}}>{cat.id}</span>
+                  <span style={{fontSize:'10px',color:`rgba(${rgb},0.68)`,fontFamily:'var(--font-mono)',fontVariantNumeric:'tabular-nums'}}>{cat.id}</span>
                 </button>
               );
             })}
@@ -461,35 +581,37 @@ function App(){
       </div>
 
       {/* ══ HEADER ══ */}
-      <header style={{flexShrink:0,background:'rgba(5,5,5,0.97)',backdropFilter:'blur(24px)',
-        borderBottom:'1px solid rgba(255,255,255,0.05)',position:'sticky',top:0,zIndex:100,overflow:'hidden'}}>
+      <header style={{flexShrink:0,background:'rgba(6,6,7,0.92)',backdropFilter:'blur(28px)',WebkitBackdropFilter:'blur(28px)',
+        borderBottom:'1px solid var(--border)',position:'sticky',top:0,zIndex:100,overflow:'hidden'}}>
 
+        {/* Top gold hairline */}
         <div style={{position:'absolute',top:0,left:0,right:0,height:'1px',
-          background:'linear-gradient(90deg,transparent 0%,rgba(212,168,79,0.5) 30%,rgba(212,168,79,0.5) 70%,transparent 100%)'}}/>
+          background:'linear-gradient(90deg,transparent 0%,rgba(212,168,79,0.55) 30%,rgba(212,168,79,0.55) 70%,transparent 100%)'}}/>
 
         {/* Brand + stats row */}
-        <div className="header-brand" style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 28px',height:62}}>
-          <div className="brand-left" style={{display:'flex',alignItems:'center',gap:14}}>
+        <div className="header-brand" style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 32px',height:68}}>
+          <div className="brand-left" style={{display:'flex',alignItems:'center',gap:16}}>
             {/* Hamburger — mobile only */}
-            <button className="mobile-hamburger" onClick={()=>setDrawerOpen(true)}
-              style={{display:'none',width:40,height:40,alignItems:'center',justifyContent:'center',
-                borderRadius:8,border:'1px solid var(--border)',background:'transparent',
-                color:'var(--text2)',cursor:'pointer',flexShrink:0,fontSize:'1.1rem'}}>☰</button>
+            <button className="mobile-hamburger" onClick={()=>setDrawerOpen(true)} aria-label="Open subjects menu"
+              style={{display:'none',width:42,height:42,alignItems:'center',justifyContent:'center',
+                borderRadius:9,border:'1px solid var(--border)',background:'var(--surface)',
+                color:'var(--text2)',cursor:'pointer',flexShrink:0,fontSize:'1.15rem'}}>☰</button>
             {/* Logo */}
-            <div style={{width:32,height:32,borderRadius:8,
-              background:'linear-gradient(145deg,rgba(212,168,83,0.12),rgba(212,168,83,0.03))',
-              border:'1px solid rgba(212,168,83,0.2)',
-              display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <rect x="1" y="1" width="5" height="5" rx="1.5" fill="#d4a853" opacity="0.9"/>
-                <rect x="8" y="1" width="5" height="5" rx="1.5" fill="#d4a853" opacity="0.35"/>
-                <rect x="1" y="8" width="5" height="5" rx="1.5" fill="#d4a853" opacity="0.35"/>
-                <rect x="8" y="8" width="5" height="5" rx="1.5" fill="#d4a853" opacity="0.12"/>
+            <div className="logo-mark" style={{width:36,height:36,borderRadius:9,
+              background:'linear-gradient(145deg,rgba(212,168,79,0.18),rgba(212,168,79,0.04))',
+              border:'1px solid rgba(212,168,79,0.26)',
+              display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,
+              boxShadow:'inset 0 1px 0 rgba(255,255,255,0.06)'}}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.6" fill="#e2bd6c" opacity="0.95"/>
+                <rect x="9" y="1.5" width="5.5" height="5.5" rx="1.6" fill="#d4a84f" opacity="0.42"/>
+                <rect x="1.5" y="9" width="5.5" height="5.5" rx="1.6" fill="#d4a84f" opacity="0.42"/>
+                <rect x="9" y="9" width="5.5" height="5.5" rx="1.6" fill="#d4a84f" opacity="0.16"/>
               </svg>
             </div>
             <div>
-              <div style={{fontSize:'0.95rem',fontWeight:600,color:'#ede8e0',letterSpacing:'-0.025em',fontFamily:"'Playfair Display',Georgia,serif"}}>Course Library</div>
-              <div style={{fontSize:'0.53rem',color:'var(--text3)',fontFamily:'monospace',marginTop:1,letterSpacing:'0.08em',textTransform:'uppercase'}}>Private Knowledge Vault</div>
+              <div className="brand-title" style={{fontSize:'1.05rem',fontWeight:600,color:'#f3efe7',letterSpacing:'-0.02em'}}>Course Library</div>
+              <div style={{fontSize:'9.5px',color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:2,letterSpacing:'0.18em',textTransform:'uppercase',fontWeight:500}}>Private Knowledge Vault</div>
             </div>
           </div>
           {/* Desktop stats */}
@@ -500,7 +622,7 @@ function App(){
               {v:stats?.totalSize||'—',l:'Total Size'},
               {v:fmtNum(stats?.totalCategories),l:'Subjects'},
             ].map((s,i)=>(
-              <div key={i} className="stat-box" style={{padding:'0 20px',textAlign:'center',borderLeft:'1px solid var(--border)',flexShrink:0}}>
+              <div key={i} className="stat-box" style={{padding:'0 22px',textAlign:'center',borderLeft:i===0?'1px solid var(--border2)':'1px solid var(--border2)',flexShrink:0,position:'relative'}}>
                 <div className="stat-val">{s.v}</div>
                 <div className="stat-lbl">{s.l}</div>
               </div>
@@ -523,60 +645,61 @@ function App(){
         </div>
 
         {/* Search + controls row */}
-        <div className="header-search-row" style={{display:'flex',alignItems:'center',gap:10,padding:'9px 28px 12px',borderTop:'1px solid var(--border2)'}}>
-          <div style={{position:'relative',flex:1,maxWidth:460}}>
-            <svg className="search-icon" style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',opacity:0.3,pointerEvents:'none'}}
-              width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
-              <line x1="9" y1="9" x2="12" y2="12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+        <div className="header-search-row" style={{display:'flex',alignItems:'center',gap:12,padding:'11px 32px 14px',borderTop:'1px solid var(--border2)'}}>
+          <div className="search-wrap" style={{position:'relative',flex:1,maxWidth:520}}>
+            <svg className="search-icon" style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'var(--text3)',pointerEvents:'none'}}
+              width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+              <circle cx="6" cy="6" r="4.6" stroke="currentColor" strokeWidth="1.35"/>
+              <line x1="9.6" y1="9.6" x2="12.6" y2="12.6" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round"/>
             </svg>
             <input ref={inputRef} className="search-in" value={q} onChange={e=>setQ(e.target.value)}
-              placeholder="Search vault…"
-              style={{width:'100%',padding:'8px 32px 8px 30px',background:'var(--surface)',
-                border:'1px solid var(--border)',borderRadius:7,color:'var(--text)',
-                fontSize:'0.75rem',transition:'all 0.2s'}}/>
-            {q&&<button onClick={()=>setQ('')} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',color:'var(--text2)',cursor:'pointer',fontSize:'1rem',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>}
+              placeholder="Search the vault…"
+              aria-label="Search categories and folders"
+              style={{width:'100%',padding:'10px 36px 10px 36px',
+                borderRadius:8,color:'var(--text)',
+                fontSize:'0.78rem',height:38,letterSpacing:'0.005em'}}/>
+            {q&&<button onClick={()=>setQ('')} aria-label="Clear search" style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',color:'var(--text3)',cursor:'pointer',fontSize:'0.85rem',width:24,height:24,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:4}}>✕</button>}
           </div>
 
-          {q&&<span style={{fontSize:'0.62rem',color:'var(--text2)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{visible.length}/{cats.length}</span>}
+          {q&&<span style={{fontSize:'10.5px',color:'var(--text2)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',padding:'4px 9px',borderRadius:99,background:'var(--surface)',border:'1px solid var(--border2)',fontVariantNumeric:'tabular-nums'}}>{visible.length}<span style={{color:'var(--text4)',margin:'0 3px'}}>/</span>{cats.length}</span>}
 
           <div style={{flex:1}}/>
           {/* ⌘K hint — desktop only */}
-          <div className="updated-label" style={{display:'flex',alignItems:'center',gap:6,fontSize:'0.58rem',color:'var(--text3)',fontFamily:'monospace'}}>
-            <kbd style={{padding:'1px 5px',borderRadius:4,border:'1px solid rgba(255,255,255,0.1)',fontSize:'0.58rem',background:'rgba(255,255,255,0.04)'}}>⌘ K</kbd>
+          <div className="updated-label" style={{display:'flex',alignItems:'center',gap:6,fontSize:'10px',color:'var(--text3)',fontFamily:'var(--font-mono)'}}>
+            <kbd style={{padding:'2px 6px',borderRadius:4,border:'1px solid var(--border)',fontSize:'10px',background:'var(--surface)',color:'var(--text2)',fontFamily:'var(--font-mono)',letterSpacing:'0.02em'}}>⌘ K</kbd>
           </div>
           {/* Live sync status pill — always visible */}
           {(()=>{
             const st=syncInfo?.lastSyncStatus||'';
             const syncing=st.startsWith('syncing')||st.startsWith('running');
             const err=st.startsWith('err')||st.startsWith('fail');
-            const dotColor=syncing?'#e8a838':err?'#e85555':'#27c093';
-            const dotGlow=syncing?'rgba(232,168,56,0.55)':err?'rgba(232,85,85,0.55)':'rgba(39,192,147,0.65)';
+            const dotColor=syncing?'var(--warn)':err?'var(--err)':'var(--ok)';
+            const dotGlow=syncing?'rgba(232,168,56,0.55)':err?'rgba(229,115,115,0.55)':'rgba(52,192,138,0.55)';
             const label=syncing?'Syncing…':err?'Sync error':'Indexed & Synced';
             const ts=syncInfo?.lastSyncTime||stats?.lastUpdated;
             return(
-              <div style={{display:'flex',alignItems:'center',gap:8,
-                padding:'4px 12px 4px 8px',borderRadius:999,
-                border:'1px solid rgba(255,255,255,0.08)',
-                background:'rgba(255,255,255,0.04)',
-                backdropFilter:'blur(8px)',
+              <div style={{display:'flex',alignItems:'center',gap:9,
+                padding:'4px 13px 4px 9px',borderRadius:99,
+                border:'1px solid var(--border)',
+                background:'linear-gradient(180deg,rgba(255,255,255,0.038),rgba(255,255,255,0.012))',
+                backdropFilter:'blur(10px)',
                 cursor:'default',userSelect:'none',flexShrink:0}}
                 title={ts?`Last sync: ${fmtIST(ts)}`:label}>
                 <span style={{width:6,height:6,borderRadius:'50%',flexShrink:0,
                   background:dotColor,
                   boxShadow:`0 0 8px ${dotGlow}`,
                   animation:syncing?'pulse-dot 1s ease infinite':'pulse-dot 3s ease infinite'}}/>
-                <div style={{display:'flex',flexDirection:'column',gap:1}}>
-                  <span style={{fontSize:'0.6rem',color:'rgba(255,255,255,0.78)',fontFamily:'monospace',lineHeight:1.2}}>{label}</span>
-                  {ts&&<span style={{fontSize:'0.54rem',color:'rgba(255,255,255,0.4)',fontFamily:'monospace',lineHeight:1.2}}>{fmtIST(ts)}</span>}
+                <div style={{display:'flex',flexDirection:'column',gap:0,lineHeight:1.25}}>
+                  <span style={{fontSize:'10px',color:'var(--text2)',fontFamily:'var(--font-mono)',letterSpacing:'0.01em',fontWeight:500}}>{label}</span>
+                  {ts&&<span style={{fontSize:'9px',color:'var(--text3)',fontFamily:'var(--font-mono)',fontVariantNumeric:'tabular-nums'}}>{fmtIST(ts)}</span>}
                 </div>
               </div>
             );
           })()}
 
-          <div className="ctrl-row" style={{display:'flex',alignItems:'center',gap:4}}>
-            <div style={{width:1,height:14,background:'var(--border)',flexShrink:0,marginRight:4}}/>
-            <button className={`ctrl${forceOpen?' on':''}`} onClick={()=>setForceOpen(true)}>Expand</button>
+          <div className="ctrl-row" style={{display:'flex',alignItems:'center',gap:6}}>
+            <div style={{width:1,height:16,background:'var(--border2)',flexShrink:0,marginRight:4}}/>
+            <button className={`ctrl${forceOpen?' on':''}`} onClick={()=>setForceOpen(true)}>Expand all</button>
             <button className="ctrl" onClick={()=>{setForceOpen(false);setQ('');}}>Collapse</button>
           </div>
         </div>
@@ -586,28 +709,32 @@ function App(){
       <div style={{display:'flex',flex:1,minHeight:0,overflow:'hidden'}}>
 
         {/* Sidebar */}
-        <nav className="sidebar sidebar-nav" style={{width:248,flexShrink:0,borderRight:'1px solid var(--border)',
-          background:'linear-gradient(180deg,var(--bg2) 0%,var(--bg) 100%)',overflowY:'auto'}}>
-          <div style={{padding:'14px 8px'}}>
-            <div style={{fontSize:'0.5rem',color:'var(--text3)',fontFamily:'monospace',textTransform:'uppercase',
-              letterSpacing:'0.14em',padding:'2px 10px 10px',opacity:0.7}}>Subject Index</div>
+        <nav className="sidebar sidebar-nav" aria-label="Subject navigation" style={{width:252,flexShrink:0,borderRight:'1px solid var(--border)',
+          background:'linear-gradient(180deg,var(--bg2) 0%,var(--bg) 70%)',overflowY:'auto'}}>
+          <div style={{padding:'18px 10px 24px'}}>
+            <div style={{fontSize:'9px',color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',
+              letterSpacing:'0.22em',padding:'2px 14px 14px',fontWeight:500,display:'flex',alignItems:'center',gap:8}}>
+              <span style={{width:14,height:1,background:'var(--gold-line)'}}/>
+              Subject Index
+            </div>
             {cats.map(cat=>{
               const act=cat.id===activeId;
               const rgb=hexRgb(cat.hue);
               const matches=catHasMatch(cat,nq);
               return(
                 <button key={cat.id} className={`sb-btn${act?' active-sb':''}`} onClick={()=>scrollTo(cat.id)}
-                  style={{width:'100%',display:'flex',alignItems:'center',gap:8,padding:'6px 10px',
+                  style={{width:'100%',display:'flex',alignItems:'center',gap:9,padding:'7px 12px 7px 14px',
                     borderRadius:6,marginBottom:1,
-                    background:act?`linear-gradient(90deg,rgba(${rgb},0.12),rgba(${rgb},0.04))`:'transparent',
-                    opacity:nq&&!matches?0.2:1}}>
-                  <span style={{width:4,height:4,borderRadius:'50%',flexShrink:0,
-                    background:act?`rgba(${rgb},0.9)`:'var(--text3)',transition:'background 0.15s'}}/>
-                  <span style={{fontSize:'0.72rem',flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
-                    letterSpacing:'-0.01em',color:act?'var(--text)':'var(--text2)',fontWeight:act?500:400,transition:'color 0.15s'}}>
+                    opacity:nq&&!matches?0.22:1,transition:'opacity var(--t-fast) ease'}}>
+                  <span style={{width:5,height:5,borderRadius:'50%',flexShrink:0,
+                    background:act?`rgba(${rgb},0.95)`:'var(--text4)',
+                    boxShadow:act?`0 0 6px rgba(${rgb},0.5)`:'none',
+                    transition:'all var(--t-fast) ease'}}/>
+                  <span style={{fontSize:'0.74rem',flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
+                    letterSpacing:'-0.005em',color:act?'var(--text)':'var(--text2)',fontWeight:act?500:400,transition:'color var(--t-fast) ease'}}>
                     {cat.shortName}
                   </span>
-                  <span style={{fontSize:'0.5rem',color:act?`rgba(${rgb},0.7)`:'var(--text2)',fontFamily:'monospace'}}>{cat.id}</span>
+                  <span style={{fontSize:'9.5px',color:act?`rgba(${rgb},0.75)`:'var(--text4)',fontFamily:'var(--font-mono)',fontVariantNumeric:'tabular-nums',transition:'color var(--t-fast) ease'}}>{cat.id}</span>
                 </button>
               );
             })}
@@ -617,30 +744,43 @@ function App(){
         {/* Main */}
         <main style={{flex:1,overflowY:'auto',minWidth:0,position:'relative'}}>
           {visible.length===0?(
-            <div style={{padding:'100px 40px',textAlign:'center'}}>
-              <div style={{fontSize:'0.7rem',color:'var(--text3)',fontFamily:'monospace',letterSpacing:'0.04em'}}>
-                No results for <span style={{color:'var(--gold)'}}>"{q}"</span>
+            <div style={{padding:'120px 40px',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',gap:18}}>
+              <div style={{width:52,height:52,borderRadius:13,border:'1px dashed var(--border)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}>
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
+                  <circle cx="9.5" cy="9.5" r="7" stroke="currentColor" strokeWidth="1.4"/>
+                  <line x1="15" y1="15" x2="20" y2="20" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                </svg>
               </div>
+              <div>
+                <div style={{fontFamily:'var(--font-serif)',fontSize:'1.05rem',color:'var(--text)',marginBottom:6,letterSpacing:'-0.015em'}}>No matches found</div>
+                <div style={{fontSize:'11px',color:'var(--text3)',fontFamily:'var(--font-mono)',letterSpacing:'0.04em'}}>
+                  No results for <span style={{color:'var(--gold-soft)'}}>"{q}"</span>
+                </div>
+              </div>
+              <button onClick={()=>setQ('')} className="ctrl">Clear search</button>
             </div>
           ):(
             <div>
-              <div className="section-label">Subject Index</div>
+              <div className="section-label">Subject Index<span style={{marginLeft:10,color:'var(--text4)'}}>·  {visible.length} {visible.length===1?'subject':'subjects'}</span></div>
               {visible.map(cat=>(
-                <CatBlock key={cat.id} cat={cat} q={nq} active={cat.id===activeId} forceOpen={forceOpen}/>
+                <CatBlock key={cat.id} cat={cat} q={nq} active={cat.id===activeId} forceOpen={forceOpen} maxSizeGB={maxSizeGB}/>
               ))}
               {/* Scroll fade */}
               <div className="scroll-fade"/>
               {/* Footer */}
-              <footer className="vault-footer" style={{padding:'56px 40px 80px',textAlign:'center',
-                background:'linear-gradient(180deg,transparent,rgba(255,255,255,0.012))'}}>
-                <div style={{fontSize:'0.52rem',color:'rgba(255,255,255,0.32)',fontFamily:'monospace',letterSpacing:'0.45em',marginBottom:28,textTransform:'uppercase'}}>── End of Archive ──</div>
-                <div style={{fontSize:'1.05rem',fontWeight:600,color:'rgba(255,255,255,0.88)',fontFamily:"'Playfair Display',serif",letterSpacing:'-0.02em',marginBottom:4}}>Course Library</div>
-                <div style={{fontSize:'0.55rem',color:'rgba(255,255,255,0.32)',fontFamily:'monospace',letterSpacing:'0.14em',textTransform:'uppercase',marginBottom:20}}>Private Knowledge Vault</div>
-                <div style={{fontSize:'0.7rem',color:'rgba(255,255,255,0.62)',marginBottom:16,fontVariantNumeric:'tabular-nums'}}>
-                  {stats?.fileCount?fmtNum(stats.fileCount):'—'} Files &bull; {fmtNum(stats?.totalFolders)} Folders &bull; {stats?.totalSize||'—'}
+              <footer className="vault-footer">
+                <div style={{fontSize:'9px',color:'var(--text4)',fontFamily:'var(--font-mono)',letterSpacing:'0.5em',marginBottom:32,textTransform:'uppercase'}}>── End of Archive ──</div>
+                <div className="brand-title" style={{fontSize:'1.25rem',fontWeight:600,color:'var(--text)',letterSpacing:'-0.025em',marginBottom:6}}>Course Library</div>
+                <div style={{fontSize:'10px',color:'var(--text3)',fontFamily:'var(--font-mono)',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:24,fontWeight:500}}>Private Knowledge Vault</div>
+                <div style={{fontSize:'0.72rem',color:'var(--text2)',marginBottom:18,fontVariantNumeric:'tabular-nums',letterSpacing:'0.005em'}}>
+                  {stats?.fileCount?fmtNum(stats.fileCount):'—'} <span style={{color:'var(--text4)'}}>Files</span>
+                  <span style={{margin:'0 10px',color:'var(--text4)'}}>·</span>
+                  {fmtNum(stats?.totalFolders)} <span style={{color:'var(--text4)'}}>Folders</span>
+                  <span style={{margin:'0 10px',color:'var(--text4)'}}>·</span>
+                  {stats?.totalSize||'—'}
                 </div>
-                <div style={{fontSize:'0.72rem',color:'rgba(255,255,255,0.52)',fontStyle:'italic',fontWeight:500,marginBottom:20}}>&ldquo;Curated knowledge compounds forever.&rdquo;</div>
-                <div style={{fontSize:'0.55rem',fontFamily:'monospace',letterSpacing:'0.1em',color:'rgba(255,255,255,0.32)'}}>Crafted &amp; Curated by <span style={{color:'rgba(212,168,79,0.82)'}}>Aman Agrahari</span></div>
+                <div style={{fontFamily:'var(--font-serif)',fontSize:'0.85rem',color:'var(--text2)',fontStyle:'italic',fontWeight:500,marginBottom:24,letterSpacing:'-0.005em'}}>&ldquo;Curated knowledge compounds forever.&rdquo;</div>
+                <div style={{fontSize:'10px',fontFamily:'var(--font-mono)',letterSpacing:'0.14em',color:'var(--text3)',fontWeight:500}}>Crafted &amp; Curated by <span style={{color:'var(--gold-soft)'}}>Aman Agrahari</span></div>
               </footer>
             </div>
           )}
