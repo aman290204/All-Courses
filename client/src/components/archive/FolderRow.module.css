@@ -88,3 +88,28 @@
   border-left: 1px solid var(--border2);
   margin-left: calc(var(--depth, 0) * 16px + 26px);
 }
+
+/* ─── Mobile depth compression: ≤640px ────────────────────────────────
+ * Deep trees (≥3 levels) overflow the viewport on phones with the
+ * 16px depth multiplier. Shrink to 11px per level + a tighter base
+ * indent. .children border-left margin moves in lockstep so the
+ * guide rail still aligns with the row content.
+ */
+@media (max-width: 640px) {
+  .row {
+    gap: 5px;
+    padding: 5px 12px 5px calc(var(--depth, 0) * 11px + 12px);
+  }
+  .name {
+    font-size: 0.7rem;
+  }
+  .row[data-depth='0'] .name {
+    font-size: 0.74rem;
+  }
+  .count {
+    font-size: 9.5px;
+  }
+  .children {
+    margin-left: calc(var(--depth, 0) * 11px + 18px);
+  }
+}
