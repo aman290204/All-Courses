@@ -777,15 +777,19 @@ function App(){
     return()=>clearTimeout(t);
   },[]);
 
-  // Coordinate exit dissolve: only after BOTH data ready (or errored) AND cinematic timer done
+  // Coordinate exit dissolve: trigger exiting once data settled AND cinematic timer done
   useEffect(()=>{
-    if(revealed||exiting)return;
-    if(!minTimeReached)return;
-    if(loading)return;
+    if(exiting||revealed)return;
+    if(!minTimeReached||loading)return;
     setExiting(true);
+  },[minTimeReached,loading,exiting,revealed]);
+
+  // Once exiting flips true, schedule reveal after dissolve duration
+  useEffect(()=>{
+    if(!exiting||revealed)return;
     const t=setTimeout(()=>setRevealed(true),820);
     return()=>clearTimeout(t);
-  },[revealed,exiting,minTimeReached,loading]);
+  },[exiting,revealed]);
   useEffect(()=>{const t=setInterval(()=>fetch('/api/status').then(r=>r.json()).then(setSyncInfo).catch(()=>{}),60000);return()=>clearInterval(t);},[]);
   // ⌘K / Ctrl+K focuses search; Esc exits category focus
   useEffect(()=>{
