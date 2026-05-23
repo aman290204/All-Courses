@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cortexa Vault — Curated for Curious Minds</title>
+<link rel="icon" type="image/png" href="/Logo.png">
+<link rel="apple-touch-icon" href="/Logo.png">
+<link rel="preload" as="image" href="/Logo.png" fetchpriority="high">
+<link rel="preload" as="image" href="/Logo-with-Name.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -466,10 +470,15 @@ body{
 
 /* Sigil — slow metallic emergence */
 .vr-sigil{
-  width:72px;height:72px;position:relative;
+  width:120px;height:120px;position:relative;
   opacity:0;filter:blur(14px) brightness(0.45);
   transform:scale(0.86);
   animation:vr-sigil-emerge 1100ms var(--ease-out) 400ms forwards;
+}
+.vr-sigil img{
+  width:100%;height:100%;display:block;
+  user-select:none;-webkit-user-drag:none;
+  filter:drop-shadow(0 8px 32px rgba(212,168,79,0.18));
 }
 @keyframes vr-sigil-emerge{
   0%{opacity:0;filter:blur(14px) brightness(0.45);transform:scale(0.86)}
@@ -716,18 +725,7 @@ function Loader({exiting}){
       <span className="vr-ring"></span>
       <span className="vr-ring r2"></span>
       <div className="vr-sigil">
-        <svg width="72" height="72" viewBox="0 0 64 64" fill="none" aria-hidden>
-          <defs>
-            <linearGradient id="vrG1" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#f0c980"/>
-              <stop offset="100%" stopColor="#8d6422"/>
-            </linearGradient>
-          </defs>
-          <rect x="6" y="6" width="22" height="22" rx="4" fill="url(#vrG1)" opacity="0.98"/>
-          <rect x="36" y="6" width="22" height="22" rx="4" fill="#d4a84f" opacity="0.45"/>
-          <rect x="6" y="36" width="22" height="22" rx="4" fill="#d4a84f" opacity="0.45"/>
-          <rect x="36" y="36" width="22" height="22" rx="4" fill="#d4a84f" opacity="0.18"/>
-        </svg>
+        <img src="/Logo.png" alt="" aria-hidden width="120" height="120" draggable="false"/>
       </div>
       <div className="vr-brand" aria-hidden>
         <span className="vr-word">Cortexa</span>
@@ -909,17 +907,14 @@ function App(){
                 borderRadius:9,border:'1px solid var(--border)',background:'var(--surface)',
                 color:'var(--text2)',cursor:'pointer',flexShrink:0,fontSize:'1.15rem'}}>☰</button>
             {/* Logo */}
-            <div className="logo-mark" style={{width:36,height:36,borderRadius:9,
-              background:'linear-gradient(145deg,rgba(212,168,79,0.18),rgba(212,168,79,0.04))',
-              border:'1px solid rgba(212,168,79,0.26)',
-              display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,
-              boxShadow:'inset 0 1px 0 rgba(255,255,255,0.06)'}}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-                <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.6" fill="#e2bd6c" opacity="0.95"/>
-                <rect x="9" y="1.5" width="5.5" height="5.5" rx="1.6" fill="#d4a84f" opacity="0.42"/>
-                <rect x="1.5" y="9" width="5.5" height="5.5" rx="1.6" fill="#d4a84f" opacity="0.42"/>
-                <rect x="9" y="9" width="5.5" height="5.5" rx="1.6" fill="#d4a84f" opacity="0.16"/>
-              </svg>
+            <div className="logo-mark" style={{width:38,height:38,borderRadius:9,
+              overflow:'hidden',flexShrink:0,
+              display:'flex',alignItems:'center',justifyContent:'center',
+              border:'1px solid rgba(212,168,79,0.22)',
+              background:'rgba(212,168,79,0.04)',
+              boxShadow:'inset 0 1px 0 rgba(255,255,255,0.05),0 1px 6px rgba(0,0,0,0.35)'}}>
+              <img src="/Logo.png" alt="Cortexa Vault" width="38" height="38" draggable="false"
+                style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
             </div>
             <div>
               <div className="brand-title" style={{fontSize:'1.05rem',fontWeight:600,color:'#f3efe7',letterSpacing:'-0.02em'}}>Cortexa Vault</div>
@@ -1082,7 +1077,9 @@ function App(){
               {/* Footer */}
               <footer className="vault-footer">
                 <div style={{fontSize:'9px',color:'var(--text4)',fontFamily:'var(--font-mono)',letterSpacing:'0.5em',marginBottom:32,textTransform:'uppercase'}}>── End of Archive ──</div>
-                <div className="brand-title" style={{fontSize:'1.25rem',fontWeight:600,color:'var(--text)',letterSpacing:'-0.025em',marginBottom:6}}>Cortexa Vault</div>
+                <img src="/Logo-with-Name.png" alt="Cortexa Vault" draggable="false"
+                  style={{maxWidth:240,width:'62%',height:'auto',display:'block',margin:'0 auto 10px',
+                    filter:'drop-shadow(0 10px 36px rgba(212,168,79,0.12))',opacity:0.96}}/>
                 <div style={{fontSize:'10px',color:'var(--text3)',fontFamily:'var(--font-mono)',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:24,fontWeight:500}}>Curated for Curious Minds</div>
                 <div style={{fontSize:'0.72rem',color:'var(--text2)',marginBottom:18,fontVariantNumeric:'tabular-nums',letterSpacing:'0.005em'}}>
                   {stats?.fileCount?fmtNum(stats.fileCount):'—'} <span style={{color:'var(--text4)'}}>Files</span>
