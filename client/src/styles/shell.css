@@ -153,14 +153,14 @@
   display: none;
 }
 .mobile-stat-card {
-  padding: 12px 14px;
+  padding: 8px 11px;
   border: 1px solid var(--border2);
-  border-radius: 9px;
+  border-radius: 7px;
   background: rgba(255, 255, 255, 0.012);
 }
 .mobile-stat-val {
   font-family: var(--font-serif);
-  font-size: 1.05rem;
+  font-size: 0.92rem;
   color: #f3efe7;
   font-weight: 600;
   letter-spacing: -0.015em;
@@ -168,12 +168,12 @@
   line-height: 1.1;
 }
 .mobile-stat-lbl {
-  font-size: 8.5px;
+  font-size: 8px;
   color: var(--text3);
   font-family: var(--font-mono);
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  margin-top: 4px;
+  margin-top: 2px;
   font-weight: 500;
 }
 
@@ -184,8 +184,8 @@
   .mobile-stats {
     display: grid !important;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding: 8px 18px 12px;
+    gap: 6px;
+    padding: 4px 14px 8px;
   }
   .mobile-hamburger {
     display: flex !important;
