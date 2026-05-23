@@ -87,8 +87,8 @@
   "hotPaths": [
     {
       "path": "public\\index.html",
-      "accessCount": 14,
-      "lastAccessed": 1779510621988,
+      "accessCount": 29,
+      "lastAccessed": 1779514960684,
       "type": "file"
     },
     {
@@ -105,8 +105,8 @@
     },
     {
       "path": "package.json",
-      "accessCount": 1,
-      "lastAccessed": 1779508913345,
+      "accessCount": 2,
+      "lastAccessed": 1779514677026,
       "type": "file"
     },
     {

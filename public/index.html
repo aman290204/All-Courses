@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Course Library</title>
+<title>Cortexa Vault — Curated for Curious Minds</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -309,6 +309,240 @@ body::after{content:'';position:fixed;top:0;bottom:0;left:50%;width:1px;
   .mobile-hamburger{display:none!important}
   .drawer-overlay{display:none!important}
 }
+
+/* ─── CORTEXA VAULT — Surgical evolution layer ───────────────── */
+
+/* Layer 3: ambient category glow — adapts via --accent-rgb on body */
+body{
+  --accent-rgb:212,168,79;
+  transition:background var(--t-slow) var(--ease);
+}
+.ambient-layer{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(900px 600px at 12% 8%,rgba(var(--accent-rgb),0.055),transparent 65%),
+    radial-gradient(1100px 700px at 88% 96%,rgba(var(--accent-rgb),0.035),transparent 60%);
+  transition:background var(--t-slow) var(--ease),opacity var(--t-slow) var(--ease);
+  opacity:0.95;
+}
+
+/* Faint radial structure (Layer 4) — very subtle archive grid feel */
+.archive-grid{
+  position:fixed;inset:0;pointer-events:none;z-index:0;opacity:0.18;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.012) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.012) 1px,transparent 1px);
+  background-size:64px 64px,64px 64px;
+  mask-image:radial-gradient(ellipse at 50% 40%,rgba(0,0,0,0.7),transparent 75%);
+  -webkit-mask-image:radial-gradient(ellipse at 50% 40%,rgba(0,0,0,0.7),transparent 75%);
+}
+
+/* ── Category Focus Mode ── */
+.cat-block{will-change:opacity,transform,filter}
+.cat-block.is-dimmed{
+  opacity:0.38;
+  filter:blur(0.6px) saturate(0.85);
+  pointer-events:none;
+}
+.cat-block.is-focused{
+  transform:translateZ(0);
+  box-shadow:
+    0 30px 80px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(var(--accent-rgb),0.18),
+    0 0 120px -20px rgba(var(--accent-rgb),0.32);
+  z-index:2;
+}
+.cat-block.is-focused .cat-btn{
+  padding-top:18px!important;padding-bottom:18px!important;
+}
+.cat-block.is-focused .cat-name{
+  font-size:1.02rem!important;
+  letter-spacing:-0.022em!important;
+}
+
+/* Sibling category dim animation */
+.cat-block{
+  transition:
+    border-color var(--t-mid) var(--ease),
+    background-color var(--t-mid) var(--ease),
+    box-shadow var(--t-slow) var(--ease),
+    transform var(--t-mid) var(--ease),
+    opacity 480ms var(--ease),
+    filter 480ms var(--ease);
+}
+
+/* Sidebar atmospheric depth */
+.sidebar-nav{
+  box-shadow:
+    inset -1px 0 rgba(255,255,255,0.018),
+    inset 0 0 90px rgba(var(--accent-rgb),0.045);
+  transition:box-shadow var(--t-slow) var(--ease);
+  position:relative;
+}
+.sidebar-nav::after{
+  content:'';position:absolute;top:0;bottom:0;right:0;width:1px;
+  background:linear-gradient(180deg,transparent,rgba(var(--accent-rgb),0.18) 30%,rgba(var(--accent-rgb),0.18) 70%,transparent);
+  opacity:0.35;
+}
+
+/* Active sidebar item — refined glow rail */
+.sb-btn.active-sb::before{
+  box-shadow:0 0 8px rgba(var(--accent-rgb),0.55);
+}
+
+/* Archive label chip — the FIN-042 / ML-118 feel */
+.archive-label{
+  font-family:var(--font-mono);font-size:9.5px;
+  letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--text3);font-weight:500;
+  padding:2px 7px;border-radius:3px;
+  border:1px solid var(--border2);
+  background:rgba(255,255,255,0.015);
+  font-variant-numeric:tabular-nums;
+}
+
+/* Progressive child reveal in tree */
+@keyframes tree-rise{
+  from{opacity:0;transform:translateY(4px)}
+  to{opacity:1;transform:none}
+}
+.tree-children > div{
+  animation:tree-rise 380ms var(--ease) both;
+}
+.tree-children > div:nth-child(1){animation-delay:0ms}
+.tree-children > div:nth-child(2){animation-delay:24ms}
+.tree-children > div:nth-child(3){animation-delay:48ms}
+.tree-children > div:nth-child(4){animation-delay:72ms}
+.tree-children > div:nth-child(5){animation-delay:96ms}
+.tree-children > div:nth-child(6){animation-delay:120ms}
+.tree-children > div:nth-child(n+7){animation-delay:140ms}
+
+/* Search beam — predictive caret */
+.search-wrap.is-active::after{
+  content:'';position:absolute;left:36px;right:48px;bottom:6px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(var(--accent-rgb),0.45),transparent);
+  animation:beam 1.6s var(--ease) infinite;
+  pointer-events:none;border-radius:99px;
+}
+@keyframes beam{
+  0%{transform:scaleX(0.2);opacity:0;transform-origin:left}
+  50%{opacity:0.8}
+  100%{transform:scaleX(1);opacity:0;transform-origin:right}
+}
+
+/* ── Vault Reveal (loader) ── */
+.vault-reveal{
+  position:fixed;inset:0;z-index:1000;
+  background:
+    radial-gradient(900px 600px at 50% 40%,rgba(212,168,79,0.10),transparent 60%),
+    radial-gradient(700px 500px at 50% 110%,rgba(108,96,217,0.04),transparent 55%),
+    #050506;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:28px;overflow:hidden;
+  animation:vr-fade-out 600ms var(--ease) forwards;
+  animation-delay:2600ms;
+}
+@keyframes vr-fade-out{
+  to{opacity:0;visibility:hidden;pointer-events:none}
+}
+
+/* Geometric vault sigil */
+.vr-sigil{
+  width:64px;height:64px;position:relative;
+  animation:vr-sigil-in 900ms var(--ease) both;
+}
+@keyframes vr-sigil-in{
+  from{opacity:0;transform:scale(0.7) rotate(-8deg);filter:blur(8px)}
+  to{opacity:1;transform:scale(1) rotate(0);filter:blur(0)}
+}
+.vr-sigil::before{
+  content:'';position:absolute;inset:-30px;border-radius:50%;
+  background:radial-gradient(circle,rgba(212,168,79,0.22),transparent 65%);
+  animation:vr-pulse 2.4s var(--ease) infinite;
+}
+@keyframes vr-pulse{
+  0%,100%{transform:scale(0.85);opacity:0.6}
+  50%{transform:scale(1.1);opacity:1}
+}
+
+/* Brand name reveal */
+.vr-brand{
+  font-family:var(--font-serif);font-weight:600;
+  font-size:2.4rem;letter-spacing:-0.03em;color:var(--text);
+  position:relative;display:flex;gap:0.18em;
+}
+.vr-brand span{
+  display:inline-block;opacity:0;
+  animation:vr-letter 700ms var(--ease) forwards;
+}
+.vr-brand span:nth-child(1){animation-delay:300ms}
+.vr-brand span:nth-child(2){animation-delay:380ms}
+.vr-brand span:nth-child(3){animation-delay:460ms}
+.vr-brand span:nth-child(4){animation-delay:540ms}
+.vr-brand span:nth-child(5){animation-delay:620ms}
+.vr-brand span:nth-child(6){animation-delay:700ms}
+.vr-brand span:nth-child(7){animation-delay:780ms}
+@keyframes vr-letter{
+  from{opacity:0;transform:translateY(14px);filter:blur(6px)}
+  to{opacity:1;transform:none;filter:blur(0)}
+}
+.vr-tagline{
+  font-family:var(--font-sans);font-size:11px;color:var(--text3);
+  letter-spacing:0.42em;text-transform:uppercase;font-weight:500;
+  opacity:0;animation:vr-tag 800ms var(--ease) forwards;
+  animation-delay:1100ms;
+}
+@keyframes vr-tag{
+  from{opacity:0;transform:translateY(6px);letter-spacing:0.6em}
+  to{opacity:1;transform:none;letter-spacing:0.42em}
+}
+.vr-divider{
+  width:120px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(212,168,79,0.55),transparent);
+  opacity:0;animation:vr-fade-in 600ms var(--ease) forwards;
+  animation-delay:1400ms;
+}
+.vr-status{
+  font-family:var(--font-mono);font-size:9.5px;
+  letter-spacing:0.32em;text-transform:uppercase;color:var(--text3);
+  display:flex;align-items:center;gap:10px;
+  opacity:0;animation:vr-fade-in 600ms var(--ease) forwards;
+  animation-delay:1700ms;
+}
+.vr-status::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--gold);box-shadow:0 0 10px rgba(212,168,79,0.7);
+  animation:pulse-dot 1.2s ease infinite;
+}
+@keyframes vr-fade-in{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:none}
+}
+
+/* The aperture — a thin gold ring sweep behind the sigil */
+.vr-ring{
+  position:absolute;width:160px;height:160px;border-radius:50%;
+  border:1px solid rgba(212,168,79,0.14);
+  animation:vr-ring 3s var(--ease) infinite;
+  pointer-events:none;
+}
+.vr-ring.r2{animation-delay:1s}
+.vr-ring.r3{animation-delay:2s}
+@keyframes vr-ring{
+  0%{transform:scale(0.4);opacity:0}
+  20%{opacity:0.8}
+  100%{transform:scale(1.8);opacity:0}
+}
+
+/* Brand title styling */
+.brand-title{font-family:var(--font-serif);font-feature-settings:'ss01'}
+
+/* Reduced motion */
+@media (prefers-reduced-motion:reduce){
+  .vault-reveal,.vault-reveal *,.tree-children > div,.search-wrap.is-active::after{
+    animation-duration:0.001ms!important;animation-delay:0ms!important;
+  }
+}
 </style>
 </head>
 <body>
@@ -366,43 +600,45 @@ function TreeNode({node,depth,q,forceOpen}){
   );
 }
 
-function CatBlock({cat,q,active,forceOpen,maxSizeGB}){
-  const [open,setOpen]=useState(false);
+function CatBlock({cat,q,active,forceOpen,maxSizeGB,focusedId,onFocus}){
   const [hovered,setHovered]=useState(false);
   const vis=catHasMatch(cat,q);
-  const show=open||forceOpen||(!!q&&catHasMatch(cat,q));
+  const isFocused=focusedId===cat.id;
+  const anyFocused=!!focusedId;
+  const show=isFocused||forceOpen||(!!q&&catHasMatch(cat,q));
   if(!vis)return null;
   const rgb=hexRgb(cat.hue);
   const url=cat.driveId?`https://drive.google.com/drive/folders/${cat.driveId}`:null;
   const sizePct=maxSizeGB?Math.min(100,Math.max(4,(cat.sizeGB||0)/maxSizeGB*100)):0;
-  const hoverStyle=hovered&&!show?{
+  const isDimmed=anyFocused&&!isFocused&&!forceOpen;
+  const hoverStyle=hovered&&!show&&!isDimmed?{
     transform:'translateY(-1px)',
     boxShadow:`0 10px 26px rgba(0,0,0,0.4), 0 0 0 1px rgba(${rgb},0.10)`,
   }:{};
   return(
-    <div id={`cat-${cat.id}`} className={`cat-block${show?' is-open':''}`}
+    <div id={`cat-${cat.id}`} className={`cat-block${show?' is-open':''}${isFocused?' is-focused':''}${isDimmed?' is-dimmed':''}`}
       onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}
       style={{borderBottom:'1px solid var(--border2)',scrollMarginTop:120,
         '--accent':`rgba(${rgb},0.55)`,
+        '--accent-rgb':rgb,
         ...hoverStyle}}>
-      <button onClick={()=>setOpen(p=>!p)} className="cat-btn"
+      <button onClick={()=>onFocus(isFocused?null:cat.id)} className="cat-btn"
         aria-expanded={show}
         style={{width:'100%',display:'flex',alignItems:'center',gap:14,padding:'14px 22px 14px 24px',cursor:'pointer',textAlign:'left',
           background:show?`linear-gradient(100deg,rgba(${rgb},0.07) 0%,rgba(${rgb},0.018) 40%,transparent 70%)`:'transparent',
           transition:'background var(--t-mid) var(--ease)'}}>
-        <div style={{flexShrink:0,width:34,height:34,borderRadius:8,
-          background:`linear-gradient(135deg,rgba(${rgb},0.18),rgba(${rgb},0.05))`,
-          border:`1px solid rgba(${rgb},0.22)`,
-          display:'flex',alignItems:'center',justifyContent:'center',
-          fontSize:'10px',fontWeight:600,color:`rgba(${rgb},0.92)`,fontFamily:'var(--font-mono)',letterSpacing:'0.04em',
-          boxShadow:show?`0 0 18px rgba(${rgb},0.15) inset`:'none',
-          transition:'box-shadow var(--t-mid) var(--ease)'}}>
+        <div className="archive-label" style={{flexShrink:0,minWidth:46,textAlign:'center',
+          color:show?`rgba(${rgb},0.92)`:'var(--text3)',
+          borderColor:show?`rgba(${rgb},0.32)`:'var(--border2)',
+          background:show?`linear-gradient(135deg,rgba(${rgb},0.10),rgba(${rgb},0.02))`:'rgba(255,255,255,0.015)',
+          boxShadow:show?`0 0 18px rgba(${rgb},0.12) inset`:'none',
+          transition:'all var(--t-mid) var(--ease)'}}>
           {cat.id}
         </div>
         <div style={{flex:1,minWidth:0}}>
           <div className="cat-name" style={{fontSize:'0.88rem',fontWeight:500,letterSpacing:'-0.018em',
             color:show?'var(--text)':'var(--text)',
-            whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color var(--t-fast) ease',
+            whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color var(--t-fast) ease,font-size var(--t-mid) var(--ease)',
             fontFamily:'var(--font-sans)'}}>
             <Hl text={cat.name} q={q}/>
           </div>
@@ -421,7 +657,7 @@ function CatBlock({cat,q,active,forceOpen,maxSizeGB}){
       </button>
       {sizePct>0&&<div className="size-bar"><span style={{width:`${sizePct}%`}}/></div>}
       {show&&(
-        <div style={{paddingTop:4,paddingBottom:10,background:'rgba(0,0,0,0.22)',borderTop:'1px solid var(--border3)'}}>
+        <div className="tree-children" style={{paddingTop:4,paddingBottom:10,background:'rgba(0,0,0,0.22)',borderTop:'1px solid var(--border3)'}}>
           {cat.children?.map((n,i)=><TreeNode key={i} node={n} depth={0} q={q} forceOpen={forceOpen}/>)}
         </div>
       )}
@@ -430,53 +666,33 @@ function CatBlock({cat,q,active,forceOpen,maxSizeGB}){
 }
 
 function Loader(){
-  const rows=[1,2,3,4,5,6,7,8];
   return(
-    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:'var(--bg)',maxWidth:1480,margin:'0 auto'}}>
-      {/* Header skeleton */}
-      <div style={{height:68,borderBottom:'1px solid var(--border)',padding:'0 32px',display:'flex',alignItems:'center',gap:18}}>
-        <div className="skel" style={{width:36,height:36,borderRadius:9}}/>
-        <div style={{display:'flex',flexDirection:'column',gap:6}}>
-          <div className="skel" style={{width:140,height:13,borderRadius:4}}/>
-          <div className="skel" style={{width:96,height:8,borderRadius:4}}/>
-        </div>
-        <div style={{marginLeft:'auto',display:'flex',gap:24}}>
-          {[60,52,72,46].map((w,i)=>(
-            <div key={i} style={{display:'flex',flexDirection:'column',gap:7,alignItems:'center'}}>
-              <div className="skel" style={{width:w,height:18,borderRadius:4}}/>
-              <div className="skel" style={{width:w*0.6,height:7,borderRadius:4}}/>
-            </div>
-          ))}
-        </div>
+    <div className="vault-reveal" role="status" aria-label="Loading Cortexa Vault">
+      <span className="vr-ring"></span>
+      <span className="vr-ring r2"></span>
+      <span className="vr-ring r3"></span>
+      <div className="vr-sigil">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden>
+          <defs>
+            <linearGradient id="vrG1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#e2bd6c"/>
+              <stop offset="100%" stopColor="#a07830"/>
+            </linearGradient>
+          </defs>
+          <rect x="6" y="6" width="22" height="22" rx="4" fill="url(#vrG1)" opacity="0.96"/>
+          <rect x="36" y="6" width="22" height="22" rx="4" fill="#d4a84f" opacity="0.45"/>
+          <rect x="6" y="36" width="22" height="22" rx="4" fill="#d4a84f" opacity="0.45"/>
+          <rect x="36" y="36" width="22" height="22" rx="4" fill="#d4a84f" opacity="0.18"/>
+        </svg>
       </div>
-      {/* Search skeleton */}
-      <div style={{padding:'12px 32px 14px',borderBottom:'1px solid var(--border2)',display:'flex',gap:10,alignItems:'center'}}>
-        <div className="skel" style={{height:36,borderRadius:7,maxWidth:480,flex:1}}/>
-        <div className="skel" style={{height:24,width:120,borderRadius:99}}/>
-        <div style={{flex:1}}/>
-        <div className="skel" style={{height:24,width:64,borderRadius:6}}/>
-        <div className="skel" style={{height:24,width:64,borderRadius:6}}/>
+      <div className="vr-brand" aria-hidden>
+        <span>C</span><span>o</span><span>r</span><span>t</span><span>e</span><span>x</span><span>a</span>
+        <span style={{display:'inline-block',width:'0.32em'}}/>
+        <span>V</span><span>a</span><span>u</span><span>l</span><span>t</span>
       </div>
-      {/* Body skeleton */}
-      <div style={{display:'flex',flex:1,minHeight:0}}>
-        <div style={{width:248,borderRight:'1px solid var(--border)',padding:'18px 10px',flexShrink:0}}>
-          <div className="skel" style={{width:80,height:8,borderRadius:4,marginBottom:14,marginLeft:10}}/>
-          {[82,68,75,62,70,58,72,64].map((w,i)=>(<div key={i} className="skel" style={{width:`${w}%`,height:28,borderRadius:6,marginBottom:3}}/>))}
-        </div>
-        <div style={{flex:1}}>
-          <div className="skel" style={{width:120,height:9,borderRadius:4,margin:'18px 24px 14px'}}/>
-          {rows.map(i=>(
-            <div key={i} style={{padding:'14px 22px',borderBottom:'1px solid var(--border2)',display:'flex',alignItems:'center',gap:14}}>
-              <div className="skel" style={{width:34,height:34,borderRadius:8,flexShrink:0}}/>
-              <div style={{flex:1}}>
-                <div className="skel" style={{width:`${38+i*6}%`,height:13,borderRadius:4,marginBottom:7}}/>
-                <div className="skel" style={{width:'28%',height:9,borderRadius:4}}/>
-              </div>
-              <div className="skel" style={{width:24,height:24,borderRadius:6}}/>
-            </div>
-          ))}
-        </div>
-      </div>
+      <div className="vr-tagline">Curated for Curious Minds</div>
+      <div className="vr-divider"/>
+      <div className="vr-status">Loading the archive</div>
     </div>
   );
 }
@@ -487,6 +703,7 @@ function App(){
   const [error,setError]=useState(null);
   const [q,setQ]=useState('');
   const [activeId,setActiveId]=useState('01');
+  const [focusedId,setFocusedId]=useState(null);
   const [forceOpen,setForceOpen]=useState(false);
   const [syncInfo,setSyncInfo]=useState(null);
   const [drawerOpen,setDrawerOpen]=useState(false);
@@ -501,19 +718,38 @@ function App(){
 
   useEffect(()=>{load();fetch('/api/status').then(r=>r.json()).then(setSyncInfo).catch(()=>{});},[]);
   useEffect(()=>{const t=setInterval(()=>fetch('/api/status').then(r=>r.json()).then(setSyncInfo).catch(()=>{}),60000);return()=>clearInterval(t);},[]);
-  // ⌘K / Ctrl+K focuses search
+  // ⌘K / Ctrl+K focuses search; Esc exits category focus
   useEffect(()=>{
-    const h=(e)=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();inputRef.current?.focus();}}
+    const h=(e)=>{
+      if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();inputRef.current?.focus();}
+      if(e.key==='Escape'){if(focusedId)setFocusedId(null); else if(q)setQ('');}
+    }
     document.addEventListener('keydown',h);
     return()=>document.removeEventListener('keydown',h);
-  },[]);
+  },[focusedId,q]);
 
   const visible=useMemo(()=>(data?.categories||[]).filter(c=>catHasMatch(c,nq)),[data,nq]);
   const stats=data?.stats;
   const cats=data?.categories||[];
   const maxSizeGB=useMemo(()=>cats.reduce((m,c)=>Math.max(m,c.sizeGB||0),0),[cats]);
 
-  function scrollTo(id){setActiveId(id);document.getElementById(`cat-${id}`)?.scrollIntoView({behavior:'smooth',block:'start'});}
+  // Adapt ambient atmosphere to focused category
+  useEffect(()=>{
+    const target=focusedId?cats.find(c=>c.id===focusedId):null;
+    const rgb=target?hexRgb(target.hue):'212,168,79';
+    document.body.style.setProperty('--accent-rgb',rgb);
+  },[focusedId,cats]);
+
+  function scrollTo(id){setActiveId(id);setFocusedId(id);document.getElementById(`cat-${id}`)?.scrollIntoView({behavior:'smooth',block:'start'});}
+  function handleFocus(id){
+    setFocusedId(id);
+    if(id){
+      setActiveId(id);
+      requestAnimationFrame(()=>{
+        document.getElementById(`cat-${id}`)?.scrollIntoView({behavior:'smooth',block:'start'});
+      });
+    }
+  }
 
   if(loading)return <Loader/>;
   if(error)return(
@@ -529,6 +765,9 @@ function App(){
 
   return(
     <div className="fade-up" style={{fontFamily:'var(--font-sans)',background:'var(--bg)',color:'var(--text)',height:'100vh',display:'flex',flexDirection:'column',fontSize:13,position:'relative',zIndex:1,maxWidth:1480,margin:'0 auto'}}>
+      {/* Ambient atmosphere layers — adapt to focused category */}
+      <div className="archive-grid" aria-hidden/>
+      <div className="ambient-layer" aria-hidden/>
       <style>{`
         .cat-btn:hover{filter:brightness(1.04)}
         .go-link{flex-shrink:0;opacity:0;transition:opacity var(--t-fast) ease,color var(--t-fast) ease,border-color var(--t-fast) ease;width:20px;height:18px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid var(--border);color:var(--text3);font-size:11px}
@@ -610,8 +849,8 @@ function App(){
               </svg>
             </div>
             <div>
-              <div className="brand-title" style={{fontSize:'1.05rem',fontWeight:600,color:'#f3efe7',letterSpacing:'-0.02em'}}>Course Library</div>
-              <div style={{fontSize:'9.5px',color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:2,letterSpacing:'0.18em',textTransform:'uppercase',fontWeight:500}}>Private Knowledge Vault</div>
+              <div className="brand-title" style={{fontSize:'1.05rem',fontWeight:600,color:'#f3efe7',letterSpacing:'-0.02em'}}>Cortexa Vault</div>
+              <div style={{fontSize:'9.5px',color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:2,letterSpacing:'0.18em',textTransform:'uppercase',fontWeight:500}}>Curated for Curious Minds</div>
             </div>
           </div>
           {/* Desktop stats */}
@@ -646,14 +885,14 @@ function App(){
 
         {/* Search + controls row */}
         <div className="header-search-row" style={{display:'flex',alignItems:'center',gap:12,padding:'11px 32px 14px',borderTop:'1px solid var(--border2)'}}>
-          <div className="search-wrap" style={{position:'relative',flex:1,maxWidth:520}}>
+          <div className={`search-wrap${q?' is-active':''}`} style={{position:'relative',flex:1,maxWidth:520}}>
             <svg className="search-icon" style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'var(--text3)',pointerEvents:'none'}}
               width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
               <circle cx="6" cy="6" r="4.6" stroke="currentColor" strokeWidth="1.35"/>
               <line x1="9.6" y1="9.6" x2="12.6" y2="12.6" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round"/>
             </svg>
             <input ref={inputRef} className="search-in" value={q} onChange={e=>setQ(e.target.value)}
-              placeholder="Search the vault…"
+              placeholder={q?"Searching the archive…":"Search the vault…"}
               aria-label="Search categories and folders"
               style={{width:'100%',padding:'10px 36px 10px 36px',
                 borderRadius:8,color:'var(--text)',
@@ -699,8 +938,8 @@ function App(){
 
           <div className="ctrl-row" style={{display:'flex',alignItems:'center',gap:6}}>
             <div style={{width:1,height:16,background:'var(--border2)',flexShrink:0,marginRight:4}}/>
-            <button className={`ctrl${forceOpen?' on':''}`} onClick={()=>setForceOpen(true)}>Expand all</button>
-            <button className="ctrl" onClick={()=>{setForceOpen(false);setQ('');}}>Collapse</button>
+            <button className={`ctrl${forceOpen?' on':''}`} onClick={()=>{setForceOpen(true);setFocusedId(null);}}>Expand all</button>
+            <button className="ctrl" onClick={()=>{setForceOpen(false);setFocusedId(null);setQ('');}}>Collapse</button>
           </div>
         </div>
       </header>
@@ -763,15 +1002,15 @@ function App(){
             <div>
               <div className="section-label">Subject Index<span style={{marginLeft:10,color:'var(--text4)'}}>·  {visible.length} {visible.length===1?'subject':'subjects'}</span></div>
               {visible.map(cat=>(
-                <CatBlock key={cat.id} cat={cat} q={nq} active={cat.id===activeId} forceOpen={forceOpen} maxSizeGB={maxSizeGB}/>
+                <CatBlock key={cat.id} cat={cat} q={nq} active={cat.id===activeId} forceOpen={forceOpen} maxSizeGB={maxSizeGB} focusedId={focusedId} onFocus={handleFocus}/>
               ))}
               {/* Scroll fade */}
               <div className="scroll-fade"/>
               {/* Footer */}
               <footer className="vault-footer">
                 <div style={{fontSize:'9px',color:'var(--text4)',fontFamily:'var(--font-mono)',letterSpacing:'0.5em',marginBottom:32,textTransform:'uppercase'}}>── End of Archive ──</div>
-                <div className="brand-title" style={{fontSize:'1.25rem',fontWeight:600,color:'var(--text)',letterSpacing:'-0.025em',marginBottom:6}}>Course Library</div>
-                <div style={{fontSize:'10px',color:'var(--text3)',fontFamily:'var(--font-mono)',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:24,fontWeight:500}}>Private Knowledge Vault</div>
+                <div className="brand-title" style={{fontSize:'1.25rem',fontWeight:600,color:'var(--text)',letterSpacing:'-0.025em',marginBottom:6}}>Cortexa Vault</div>
+                <div style={{fontSize:'10px',color:'var(--text3)',fontFamily:'var(--font-mono)',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:24,fontWeight:500}}>Curated for Curious Minds</div>
                 <div style={{fontSize:'0.72rem',color:'var(--text2)',marginBottom:18,fontVariantNumeric:'tabular-nums',letterSpacing:'0.005em'}}>
                   {stats?.fileCount?fmtNum(stats.fileCount):'—'} <span style={{color:'var(--text4)'}}>Files</span>
                   <span style={{margin:'0 10px',color:'var(--text4)'}}>·</span>
