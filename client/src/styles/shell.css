@@ -206,4 +206,8 @@
   .drawer-overlay {
     display: block !important;
   }
+  .vault-footer {
+    padding: 32px 18px 40px !important;
+    margin-top: 32px !important;
+  }
 }
