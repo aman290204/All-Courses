@@ -1,0 +1,313 @@
+/*
+ * loader.module.css — Vault Reveal (cinematic loader)
+ *
+ * Ported verbatim from public/index.html lines 437–599.
+ * Timing values are NOT hardcoded — they arrive as CSS custom properties
+ * from VaultReveal.tsx, sourced from components/loader/timing.ts.
+ *
+ * Grep gate (LOADER_BASELINE.md §13.4):
+ *   grep -E "[0-9]+ms" client/src/components/loader/*.module.css  → 0 matches
+ *
+ * Hex colors and rgba values are loader-specific atmosphere and stay inline.
+ * Identity tokens (--font-*, --text*, --gold-soft, --ease, --ease-out) cascade
+ * from tokens.css.
+ */
+
+.vaultReveal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background:
+    radial-gradient(900px 620px at 50% 42%, rgba(212, 168, 79, 0.085), transparent 62%),
+    radial-gradient(720px 540px at 50% 112%, rgba(108, 96, 217, 0.035), transparent 58%),
+    #050506;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity var(--ld-dissolve-duration) cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+.vaultReveal.isExiting {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Aperture ring sweeps — slow, premium */
+.vrRing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  border: 1px solid rgba(212, 168, 79, 0.14);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.5);
+  transform-origin: center;
+  animation: vrRing var(--ld-ring-duration) var(--ease-out) var(--ld-ring-delay) infinite;
+}
+
+.vrRing.r2 {
+  animation-delay: var(--ld-ring-r2-delay);
+}
+
+@keyframes vrRing {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.2);
+    opacity: 0;
+  }
+}
+
+/* Sigil — slow metallic emergence */
+.vrSigil {
+  width: 120px;
+  height: 120px;
+  position: relative;
+  opacity: 0;
+  filter: blur(14px) brightness(0.45);
+  transform: scale(0.86);
+  animation: vrSigilEmerge var(--ld-sigil-duration) var(--ease-out) var(--ld-sigil-delay) forwards;
+}
+
+.vrSigil img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 8px 32px rgba(212, 168, 79, 0.18));
+}
+
+@keyframes vrSigilEmerge {
+  0% {
+    opacity: 0;
+    filter: blur(14px) brightness(0.45);
+    transform: scale(0.86);
+  }
+  55% {
+    opacity: 0.9;
+    filter: blur(2px) brightness(0.95);
+    transform: scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0) brightness(1);
+    transform: scale(1);
+  }
+}
+
+.vrSigil::before {
+  content: '';
+  position: absolute;
+  inset: -40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(212, 168, 79, 0.18), transparent 65%);
+  opacity: 0;
+  pointer-events: none;
+  animation: vrHalo var(--ld-halo-duration) cubic-bezier(0.45, 0, 0.55, 1) var(--ld-halo-delay) infinite;
+}
+
+@keyframes vrHalo {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.08);
+  }
+}
+
+/* Wordmark — luxury watch reveal: letter-spacing relaxes from wide to natural */
+.vrBrand {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 2.55rem;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  white-space: nowrap;
+  margin-top: 6px;
+}
+
+.vrBrand .vrWord {
+  display: inline-block;
+  opacity: 0;
+  letter-spacing: 0.55em;
+  filter: blur(8px);
+  transform: translateY(2px);
+  animation: vrWordmark var(--ld-wordmark-duration) var(--ease-out) var(--ld-wordmark-delay) forwards;
+  background: linear-gradient(180deg, #f3efe7 0%, #cfc5b3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.vrBrand .vrWord.w2 {
+  animation-delay: var(--ld-wordmark-w2-delay);
+}
+
+.vrBrand .vrGap {
+  display: inline-block;
+  width: 0.36em;
+}
+
+@keyframes vrWordmark {
+  0% {
+    opacity: 0;
+    letter-spacing: 0.55em;
+    filter: blur(8px);
+    transform: translateY(2px);
+  }
+  55% {
+    opacity: 0.85;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 1;
+    letter-spacing: -0.018em;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+/* Tagline — secondary priority */
+.vrTagline {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  color: var(--text3);
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(4px);
+  animation: vrFadeUp var(--ld-tagline-duration) var(--ease-out) var(--ld-tagline-delay) forwards;
+}
+
+@keyframes vrFadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hairline divider */
+.vrDivider {
+  width: 88px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212, 168, 79, 0.42), transparent);
+  opacity: 0;
+  animation: vrFadeIn var(--ld-divider-duration) var(--ease) var(--ld-divider-delay) forwards;
+}
+
+@keyframes vrFadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Status narrative — sequential reveal */
+.vrStatusList {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  margin-top: 6px;
+  min-height: 108px;
+}
+
+.vrStatus {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--text3);
+  opacity: 0;
+  transform: translateY(3px);
+  filter: blur(4px);
+  animation: vrStatusIn var(--ld-status-duration) var(--ease-out) forwards;
+}
+
+.vrStatus.s1 {
+  animation-delay: var(--ld-status-s1-delay);
+}
+
+.vrStatus.s2 {
+  animation-delay: var(--ld-status-s2-delay);
+}
+
+.vrStatus.s3 {
+  animation-delay: var(--ld-status-s3-delay);
+}
+
+.vrStatus.s4 {
+  animation-delay: var(--ld-status-s4-delay);
+  color: var(--gold-soft);
+  letter-spacing: 0.4em;
+  text-shadow: 0 0 14px rgba(212, 168, 79, 0.42);
+  font-weight: 500;
+}
+
+@keyframes vrStatusIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Developer credit — studio ending beat */
+.vrCredit {
+  position: absolute;
+  bottom: 46px;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  font-family: var(--font-sans);
+  font-size: 9px;
+  letter-spacing: 0.44em;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: rgba(212, 168, 79, 0.42);
+  opacity: 0;
+  animation: vrCreditIn var(--ld-credit-duration) var(--ease-out) var(--ld-credit-delay) forwards;
+}
+
+@keyframes vrCreditIn {
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Reduced motion — cinematic hold is preserved (MIN_CINEMATIC_TIME unchanged in JS),
+ * but every animation collapses to its final keyframe instantly.
+ * Uses var(--ld-instant) instead of a literal so the grep gate stays clean.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .vaultReveal,
+  .vaultReveal * {
+    animation-duration: var(--ld-instant) !important;
+    animation-delay: 0 !important;
+    transition-duration: var(--ld-instant) !important;
+  }
+}
