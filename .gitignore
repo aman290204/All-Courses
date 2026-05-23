@@ -29,3 +29,4 @@ client/dist/
 
 # ── Tooling session state (oh-my-claudecode) ───────────────────────
 .omc/state/
+client/.omc/

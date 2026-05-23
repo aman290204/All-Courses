@@ -1,0 +1,57 @@
+/*
+ * tokens.css — Cortexa Vault design tokens
+ *
+ * Phase 1 scope: motion + easing only.
+ * Phase 2 additions (loader parity): identity tokens required by the cinematic
+ * loader — fonts, text colors, gold-soft, and the two legacy ease curves the
+ * loader animations reference by name. Values are ported verbatim from
+ * public/index.html — no new colors, no new typography (MIGRATION_RULES.md
+ * rules 10–11).
+ *
+ * Loader timing constants live in components/loader/timing.ts and are
+ * governed separately (MIGRATION_RULES.md rule 29).
+ */
+
+:root {
+  /* ─── Motion ─────────────────────────────────────────────────────────── */
+  --motion-fast: 180ms;
+  --motion-base: 320ms;
+  --motion-focus: 520ms;
+  --motion-cinematic: 820ms;
+
+  /* ─── Easing — outside-loader vocabulary ─────────────────────────────── */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-entrance: cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-cinematic: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* ─── Easing — legacy curves the loader animations reference by name ─── */
+  /* Loader-only; see LOADER_BASELINE.md §6. Do not adopt outside the loader. */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ─── Typography — ported verbatim from legacy ───────────────────────── */
+  --font-sans: 'Inter', 'SF Pro Text', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Fraunces', 'Playfair Display', Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+
+  /* ─── Text ladder — ported verbatim from legacy ──────────────────────── */
+  /* Phase 2 only ports the values the loader needs (--text, --text3).
+   * --text2 and --text4 land in Phase 3 alongside the Shell port. */
+  --text: #f3efe7;
+  --text3: rgba(243, 239, 231, 0.38);
+
+  /* ─── Gold — ported verbatim from legacy ─────────────────────────────── */
+  /* Phase 2 ports --gold-soft for the "Vault ready" status treatment.
+   * Other gold tokens land as needed in later phases. */
+  --gold-soft: #e2bd6c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 1ms;
+    --motion-base: 1ms;
+    --motion-focus: 1ms;
+    --motion-cinematic: 1ms;
+  }
+}
