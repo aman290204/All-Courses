@@ -1,0 +1,129 @@
+/*
+ * Drawer.module.css — Ported from public/index.html lines 854-891.
+ * Single CSS-variable channel (--cat-rgb) lets per-item color keying
+ * read from a className-driven module without inline gradient style
+ * props (Rule 18: inline `style` props are forbidden in new components,
+ * with one allowed exception — setting a single typed CSS custom
+ * property as the per-item color channel for downstream module rules).
+ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: var(--z-drawer);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-mid) var(--ease);
+}
+.overlay[data-open='true'] {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.drawer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 268px;
+  background: linear-gradient(180deg, var(--bg2), var(--bg));
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform var(--t-mid) var(--ease);
+}
+.drawer[data-open='true'] {
+  transform: translateX(0);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 18px;
+  border-bottom: 1px solid var(--border2);
+}
+.eyebrow {
+  font-size: 10px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-weight: 500;
+}
+.close {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  cursor: pointer;
+  background: var(--surface);
+  font-size: 0.95rem;
+  transition: all var(--t-fast) var(--ease);
+}
+.close:hover {
+  color: var(--text);
+  border-color: var(--border3);
+}
+
+.body {
+  padding: 10px;
+}
+
+.row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border-radius: 8px;
+  margin-bottom: 2px;
+  min-height: 46px;
+}
+.row[data-active='true'] {
+  background: linear-gradient(
+    90deg,
+    rgba(var(--cat-rgb), 0.13),
+    rgba(var(--cat-rgb), 0.03)
+  );
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text4);
+  transition: background var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.row[data-active='true'] .dot {
+  background: rgba(var(--cat-rgb), 0.95);
+  box-shadow: 0 0 8px rgba(var(--cat-rgb), 0.55);
+}
+
+.name {
+  font-size: 0.9rem;
+  flex: 1;
+  color: var(--text2);
+  font-weight: 400;
+}
+.row[data-active='true'] .name {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.idx {
+  font-size: 10px;
+  color: rgba(var(--cat-rgb), 0.68);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

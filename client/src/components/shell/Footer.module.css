@@ -1,0 +1,73 @@
+/*
+ * Footer.module.css — Verbatim port of public/index.html lines 1079-1092.
+ * Padding / border-top / margin-top come from the global .vault-footer
+ * class in shell.css — this module owns only the interior layout.
+ */
+.footer {
+  /* layout owned by .vault-footer in shell.css */
+}
+
+.eyebrow {
+  font-size: 9px;
+  color: var(--text4);
+  font-family: var(--font-mono);
+  letter-spacing: 0.5em;
+  margin-bottom: 32px;
+  text-transform: uppercase;
+}
+
+.logo {
+  max-width: 240px;
+  width: 62%;
+  height: auto;
+  display: block;
+  margin: 0 auto 10px;
+  filter: drop-shadow(0 10px 36px rgba(212, 168, 79, 0.12));
+  opacity: 0.96;
+}
+
+.tagline {
+  font-size: 10px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  font-weight: 500;
+}
+
+.counts {
+  font-size: 0.72rem;
+  color: var(--text2);
+  margin-bottom: 18px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.005em;
+}
+.dim {
+  color: var(--text4);
+}
+.sep {
+  margin: 0 10px;
+  color: var(--text4);
+}
+
+.quote {
+  font-family: var(--font-serif);
+  font-size: 0.85rem;
+  color: var(--text2);
+  font-style: italic;
+  font-weight: 500;
+  margin-bottom: 24px;
+  letter-spacing: -0.005em;
+}
+
+.byline {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.14em;
+  color: var(--text3);
+  font-weight: 500;
+}
+.who {
+  color: var(--gold-soft);
+}

@@ -4,47 +4,122 @@
  * Phase 1 scope: motion + easing only.
  * Phase 2 additions (loader parity): identity tokens required by the cinematic
  * loader — fonts, text colors, gold-soft, and the two legacy ease curves the
- * loader animations reference by name. Values are ported verbatim from
- * public/index.html — no new colors, no new typography (MIGRATION_RULES.md
- * rules 10–11).
+ * loader animations reference by name.
+ * Phase 3 additions (Shell + ArchiveTree parity): full surface / border / text
+ * ladders, the complete gold palette, semantic colors, spacing, radii, shadows,
+ * the legacy --t-* duration tokens (consumed by ported CSS), the z-index ladder,
+ * and the body-level --accent-rgb atmosphere variable.
+ *
+ * Every value is ported VERBATIM from public/index.html — no new colors, no new
+ * typography, no new motion vocabulary (MIGRATION_RULES.md rules 10–14, 27–28).
  *
  * Loader timing constants live in components/loader/timing.ts and are
  * governed separately (MIGRATION_RULES.md rule 29).
  */
 
 :root {
-  /* ─── Motion ─────────────────────────────────────────────────────────── */
+  /* ─── Surfaces ──────────────────────────────────────────────────────── */
+  --bg: #060607;
+  --bg2: #0a0a0c;
+  --surface: #101013;
+  --surface2: #16161a;
+  --surface3: #1c1c21;
+
+  /* ─── Borders — hairlines ───────────────────────────────────────────── */
+  --border: rgba(255, 255, 255, 0.065);
+  --border2: rgba(255, 255, 255, 0.035);
+  --border3: rgba(255, 255, 255, 0.018);
+
+  /* ─── Text ladder ───────────────────────────────────────────────────── */
+  --text: #f3efe7;
+  --text2: rgba(243, 239, 231, 0.66);
+  --text3: rgba(243, 239, 231, 0.38);
+  --text4: rgba(243, 239, 231, 0.22);
+
+  /* ─── Gold accent ───────────────────────────────────────────────────── */
+  --gold: #d4a84f;
+  --gold-soft: #e2bd6c;
+  --gold-deep: #a07830;
+  --gold-glow: rgba(212, 168, 79, 0.14);
+  --gold-glow2: rgba(212, 168, 79, 0.06);
+  --gold-line: rgba(212, 168, 79, 0.32);
+
+  /* ─── Semantic ──────────────────────────────────────────────────────── */
+  --ok: #34c08a;
+  --warn: #e8a838;
+  --err: #e57373;
+
+  /* ─── Spacing scale (4px grid) ──────────────────────────────────────── */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 40px;
+  --s-9: 48px;
+  --s-10: 64px;
+
+  /* ─── Radii ─────────────────────────────────────────────────────────── */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 10px;
+  --r-xl: 14px;
+  --r-2xl: 18px;
+
+  /* ─── Shadows ───────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-gold: 0 8px 28px rgba(212, 168, 79, 0.12);
+
+  /* ─── Typography ────────────────────────────────────────────────────── */
+  --font-sans: 'Inter', 'SF Pro Text', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Fraunces', 'Playfair Display', Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+
+  /* ─── Motion — outside-loader vocabulary (rule 27) ──────────────────── */
   --motion-fast: 180ms;
   --motion-base: 320ms;
   --motion-focus: 520ms;
   --motion-cinematic: 820ms;
 
-  /* ─── Easing — outside-loader vocabulary ─────────────────────────────── */
+  /* ─── Legacy duration tokens — consumed by ported component CSS ─────── */
+  /* These mirror the values that appear in public/index.html and are kept
+   * verbatim so ported transition declarations work without rewrites.
+   * Rule 27 governs NEW component CSS — ported code uses these names. */
+  --t-fast: 160ms;
+  --t-mid: 240ms;
+  --t-slow: 360ms;
+  --t-drawer: 320ms;
+
+  /* ─── Easing — outside-loader vocabulary (rule 28) ──────────────────── */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-entrance: cubic-bezier(0, 0, 0.2, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --ease-cinematic: cubic-bezier(0.22, 0.61, 0.36, 1);
 
-  /* ─── Easing — legacy curves the loader animations reference by name ─── */
-  /* Loader-only; see LOADER_BASELINE.md §6. Do not adopt outside the loader. */
+  /* ─── Easing — legacy curves referenced by name in ported CSS ───────── */
+  /* See LOADER_BASELINE.md §6. Loader-only outside Phase 3 ports. */
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* ─── Typography — ported verbatim from legacy ───────────────────────── */
-  --font-sans: 'Inter', 'SF Pro Text', system-ui, -apple-system, sans-serif;
-  --font-serif: 'Fraunces', 'Playfair Display', Georgia, serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  /* ─── Z-index ladder ────────────────────────────────────────────────── */
+  /* 0 = atmosphere layers, 1 = app shell content, 2 = focused category,
+   * 100 = sticky header, 200 = mobile drawer, 1000 = cinematic loader. */
+  --z-atmosphere: 0;
+  --z-shell: 1;
+  --z-focused: 2;
+  --z-header: 100;
+  --z-drawer: 200;
+  --z-loader: 1000;
 
-  /* ─── Text ladder — ported verbatim from legacy ──────────────────────── */
-  /* Phase 2 only ports the values the loader needs (--text, --text3).
-   * --text2 and --text4 land in Phase 3 alongside the Shell port. */
-  --text: #f3efe7;
-  --text3: rgba(243, 239, 231, 0.38);
-
-  /* ─── Gold — ported verbatim from legacy ─────────────────────────────── */
-  /* Phase 2 ports --gold-soft for the "Vault ready" status treatment.
-   * Other gold tokens land as needed in later phases. */
-  --gold-soft: #e2bd6c;
+  /* ─── Atmosphere — single writeable surface for category accent ─────── */
+  /* AmbientController is the only component that writes to this on document.body.
+   * All other consumers READ via CSS. See ARCHITECTURE_NOTES.md §3. */
+  --accent-rgb: 212, 168, 79;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -53,5 +128,9 @@
     --motion-base: 1ms;
     --motion-focus: 1ms;
     --motion-cinematic: 1ms;
+    --t-fast: 1ms;
+    --t-mid: 1ms;
+    --t-slow: 1ms;
+    --t-drawer: 1ms;
   }
 }

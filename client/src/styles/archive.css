@@ -1,0 +1,175 @@
+/*
+ * archive.css — Cross-cutting archive primitives ported VERBATIM from
+ * public/index.html.
+ *
+ * Legacy line ranges:
+ *   - lines 131-146 (.cat-block, .cat-block::before, .cat-btn, .size-bar)
+ *   - lines 215-218 (.tree-row + hover + ::before gold rail)
+ *   - lines 345-376 (.cat-block.is-dimmed, .cat-block.is-focused, sibling dim
+ *     transition merge)
+ *   - lines 397-422 (.archive-label chip, .tree-children rise + nth-child
+ *     stagger)
+ *
+ * These classes are deliberately kept global (NOT CSS-module-scoped) because
+ * they describe shared archive primitives that CatBlock + FolderRow + the
+ * sidebar focus-glow ALL key off. Per-component layout/typography lives in
+ * the sibling *.module.css files. Same convention as shell.css (cross-
+ * component primitives) vs *.module.css (per-component layout).
+ *
+ * Per-category accent is read via the typed `--cat-rgb` and `--accent`
+ * custom-property channels set on `.cat-block` from React. That is the
+ * single Rule 18 exception in this file.
+ */
+
+/* ─── Cat block: base ──────────────────────────────────────────────── */
+.cat-block {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0)) var(--surface);
+  position: relative;
+  will-change: opacity, transform, filter;
+  transition:
+    border-color var(--t-mid) var(--ease),
+    background-color var(--t-mid) var(--ease),
+    box-shadow var(--t-slow) var(--ease),
+    transform var(--t-mid) var(--ease),
+    opacity 480ms var(--ease),
+    filter 480ms var(--ease);
+}
+.cat-block::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: transparent;
+  transition: background var(--t-mid) var(--ease);
+}
+.cat-block.is-open::before {
+  background: linear-gradient(180deg, var(--accent, var(--gold-line)) 0%, transparent 100%);
+}
+
+/* ─── Cat block: focused / dimmed states ────────────────────────────── */
+.cat-block.is-dimmed {
+  opacity: 0.38;
+  filter: blur(0.6px) saturate(0.85);
+  pointer-events: none;
+}
+.cat-block.is-focused {
+  transform: translateZ(0);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(var(--cat-rgb), 0.18),
+    0 0 120px -20px rgba(var(--cat-rgb), 0.32);
+  z-index: 2;
+}
+.cat-block.is-focused .cat-btn {
+  padding-top: 18px !important;
+  padding-bottom: 18px !important;
+}
+.cat-block.is-focused .cat-name {
+  font-size: 1.02rem !important;
+  letter-spacing: -0.022em !important;
+}
+
+/* ─── Cat button transitions (state-keyed; layout in CatBlock.module.css) ── */
+.cat-btn {
+  transition: all var(--t-mid) var(--ease) !important;
+  border-radius: 0;
+}
+.cat-btn:active {
+  transform: scale(0.992) !important;
+}
+
+/* ─── Size bar (sticky bottom 1px rail under each cat-block) ─────────── */
+.size-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.025);
+  overflow: hidden;
+}
+.size-bar > span {
+  display: block;
+  height: 100%;
+  width: var(--size-pct, 0);
+  background: linear-gradient(90deg, var(--accent, var(--gold-line)), transparent);
+  opacity: 0.55;
+  transition: width var(--t-slow) var(--ease);
+}
+
+/* ─── Archive label chip — the FIN-042 / ML-118 typography ──────────── */
+.archive-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text3);
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid var(--border2);
+  background: rgba(255, 255, 255, 0.015);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Tree row hover + left gold-rail accent ─────────────────────────── */
+.tree-row {
+  transition: background var(--t-fast) ease, color var(--t-fast) ease;
+  position: relative;
+}
+.tree-row:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+.tree-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: var(--gold-line);
+  transition: width var(--t-fast) ease;
+  opacity: 0;
+}
+.tree-row:hover::before {
+  width: 2px;
+  opacity: 1;
+}
+
+/* ─── Progressive child reveal in tree (rise + stagger) ─────────────── */
+@keyframes tree-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.tree-children > div {
+  animation: tree-rise 380ms var(--ease) both;
+}
+.tree-children > div:nth-child(1) {
+  animation-delay: 0ms;
+}
+.tree-children > div:nth-child(2) {
+  animation-delay: 24ms;
+}
+.tree-children > div:nth-child(3) {
+  animation-delay: 48ms;
+}
+.tree-children > div:nth-child(4) {
+  animation-delay: 72ms;
+}
+.tree-children > div:nth-child(5) {
+  animation-delay: 96ms;
+}
+.tree-children > div:nth-child(6) {
+  animation-delay: 120ms;
+}
+.tree-children > div:nth-child(n + 7) {
+  animation-delay: 140ms;
+}

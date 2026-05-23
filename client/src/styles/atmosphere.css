@@ -1,0 +1,71 @@
+/*
+ * atmosphere.css — Cortexa Vault ambient layers + ambient-driven flourishes.
+ *
+ * Phase 3 — ported VERBATIM from public/index.html lines 317-435 (the
+ * "CORTEXA VAULT — Surgical evolution layer" block) and the small block
+ * at lines 191-218 that the ambient atmosphere shares (tree-rise stagger,
+ * scroll-fade, etc.).
+ *
+ * The single writeable surface is `document.body { --accent-rgb }`, written
+ * exclusively by `components/atmosphere/AmbientController.tsx`. Every other
+ * consumer reads via the cascade — no component duplicates the write.
+ *
+ * ARCHITECTURE_NOTES.md §3 grep gate enforces single-writer pattern.
+ */
+
+/* ─── Layer 3: ambient category glow — adapts via --accent-rgb on body ── */
+.ambient-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--z-atmosphere);
+  background:
+    radial-gradient(900px 600px at 12% 8%, rgba(var(--accent-rgb), 0.055), transparent 65%),
+    radial-gradient(1100px 700px at 88% 96%, rgba(var(--accent-rgb), 0.035), transparent 60%);
+  transition: background var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease);
+  opacity: 0.95;
+}
+
+/* ─── Layer 4: faint radial structure — very subtle archive grid feel ── */
+.archive-grid {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--z-atmosphere);
+  opacity: 0.18;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+  background-size: 64px 64px, 64px 64px;
+  mask-image: radial-gradient(ellipse at 50% 40%, rgba(0, 0, 0, 0.7), transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 40%, rgba(0, 0, 0, 0.7), transparent 75%);
+}
+
+/* ─── Progressive child reveal in the tree ──────────────────────────── */
+@keyframes tree-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ─── Search beam — predictive caret ────────────────────────────────── */
+@keyframes beam {
+  0% {
+    transform: scaleX(0.2);
+    opacity: 0;
+    transform-origin: left;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+    transform-origin: right;
+  }
+}
