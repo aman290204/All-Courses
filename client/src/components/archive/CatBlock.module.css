@@ -154,3 +154,39 @@
   background: rgba(0, 0, 0, 0.22);
   border-top: 1px solid var(--border3);
 }
+
+/* ─── Mobile density: ≤640px ──────────────────────────────────────────
+ * Reduces per-category card height while preserving the chip + meta
+ * row composition. Pairs with archive.css mobile override of the
+ * legacy `.cat-block.is-focused .cat-btn` !important padding.
+ */
+@media (max-width: 640px) {
+  .button {
+    padding: 10px 16px 10px 18px;
+    gap: 10px;
+  }
+  .label {
+    min-width: 40px;
+  }
+  .name {
+    font-size: 0.82rem;
+  }
+  .meta {
+    gap: 8px;
+    margin-top: 3px;
+  }
+  .metaFolders,
+  .metaSize {
+    font-size: 10px;
+  }
+  .chevron {
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
+  }
+  .go {
+    min-width: 28px;
+    min-height: 28px;
+    font-size: 13px;
+  }
+}

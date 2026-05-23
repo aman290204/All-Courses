@@ -173,3 +173,19 @@
 .tree-children > div:nth-child(n + 7) {
   animation-delay: 140ms;
 }
+
+/* ─── Mobile override for focused cat-block height ──────────────────────
+ * The base rule `.cat-block.is-focused .cat-btn { padding: 18px !important }`
+ * fights mobile density. Match the specificity at ≤640px with smaller
+ * mobile values. Same applies to the focused name font-size step-up.
+ */
+@media (max-width: 640px) {
+  .cat-block.is-focused .cat-btn {
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+  .cat-block.is-focused .cat-name {
+    font-size: 0.95rem !important;
+    letter-spacing: -0.02em !important;
+  }
+}
