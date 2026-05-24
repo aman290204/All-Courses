@@ -290,29 +290,33 @@ def _get_start_token(service):
     ))
     return resp["startPageToken"]
 
-def _fetch_changes_since(service, token):
+def _fetch_changes_batch(service, token, max_pages=50):
     """
-    Fetch all file changes since the given token.
-    Returns (list_of_changes, new_token).
-    Each change: {fileId, removed, file:{size, parents, mimeType, trashed}}
+    Fetch up to max_pages pages of changes starting from token.
+    Returns (changes, next_token, is_done).
+      - next_token: resume token (nextPageToken if mid-stream, newStartPageToken if finished)
+      - is_done: True when we've consumed all pending changes
     """
-    changes, page_token, new_token = [], token, token
+    changes, page_token, next_token = [], token, token
     page_num = 0
-    while page_token:
+    is_done  = False
+    while page_token and page_num < max_pages:
         resp = retry_execute(lambda pt=page_token: service.changes().list(
-            pageToken=pt, pageSize=1000,
+            pageToken=pt, pageSize=500,
             fields="nextPageToken,newStartPageToken,changes(fileId,removed,file(size,parents,mimeType,trashed))",
             supportsAllDrives=True, includeItemsFromAllDrives=True,
             includeRemoved=True,
         ))
         changes.extend(resp.get("changes", []))
-        new_token  = resp.get("newStartPageToken", new_token)
         page_token = resp.get("nextPageToken")
         page_num  += 1
-        if page_num % 10 == 0:  # print every 10 pages so Render logs show progress
-            print(f"  [changes] page {page_num} — {len(changes):,} changes so far…", flush=True)
-    print(f"  → {len(changes):,} changes since last run ({page_num} pages)", flush=True)
-    return changes, new_token
+        # newStartPageToken is only present on the final page
+        if "newStartPageToken" in resp:
+            next_token = resp["newStartPageToken"]
+            is_done    = True
+        elif page_token:
+            next_token = page_token  # intermediate resume point
+    return changes, next_token, is_done
 
 def _build_direct_bytes(sizes_cache, folder_ids):
     """
@@ -359,34 +363,40 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
         max_workers = int(os.environ.get("SCAN_WORKERS", 3))  # 3 = safe default (avoids rate limits)
     sizes_cache, changes_token = _load_size_cache()
 
-    # ── INCREMENTAL PATH ─────────────────────────────────────────────────────
+    # ── INCREMENTAL PATH (batched) ────────────────────────────────────────────
     if sizes_cache is not None and changes_token:
-        print(f"  [incremental] Fetching only changed files since last run…", flush=True)
+        print(f"  [incremental] Fetching changes in batches of 50 pages (~25,000 each)…", flush=True)
         t0 = time.time()
-        changes, new_token = _fetch_changes_since(service, changes_token)
+        BATCH_PAGES  = 50   # ~25,000 changes per batch; safe for ~3-4 min per batch
+        total_added  = total_removed = total_updated = 0
+        current_token = changes_token
+        batch_num    = 0
+        total_changes = 0
 
-        if not changes:
-            print("  [incremental] No changes — reusing cached sizes instantly", flush=True)
-        else:
+        while True:
+            batch_num += 1
+            batch, next_token, is_done = _fetch_changes_batch(service, current_token, max_pages=BATCH_PAGES)
+            total_changes += len(batch)
+            print(f"  [incremental] Batch {batch_num}: {len(batch):,} changes fetched {'(final)' if is_done else '(more pending)'}…", flush=True)
+
+            # Apply this batch to the in-memory cache
             added = removed = updated = 0
-            for change in changes:
+            for change in batch:
                 if "fileId" not in change:
                     continue  # drive-level change — no fileId, skip safely
-                fid     = change["fileId"]
+                fid      = change["fileId"]
                 removed_ = change.get("removed", False)
                 f        = change.get("file") or {}
                 trashed  = f.get("trashed", False)
                 mime     = f.get("mimeType", "")
-
                 if mime == "application/vnd.google-apps.folder":
-                    continue  # skip folder changes — handled in phase 1
-
+                    continue
                 if removed_ or trashed:
                     if fid in sizes_cache:
                         del sizes_cache[fid]
                         removed += 1
                 else:
-                    size    = int(f.get("size") or 0)
+                    size   = int(f.get("size") or 0)
                     parents = f.get("parents", [])
                     parent  = parents[0] if parents else None
                     if fid in sizes_cache:
@@ -395,16 +405,25 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
                         added += 1
                     sizes_cache[fid] = [size, parent]
 
-            print(f"  [incremental] +{added:,} new | ~{updated:,} updated | -{removed:,} removed")
+            total_added += added; total_removed += removed; total_updated += updated
+
+            # ── Save progress after every batch ──────────────────────────────
+            # Saves the intermediate token so a crash mid-run resumes here,
+            # not from the beginning of the entire backlog.
+            _save_size_cache(sizes_cache, next_token)
+            print(f"  [incremental] Batch {batch_num} saved: +{added:,} new | ~{updated:,} updated | -{removed:,} removed | token advanced", flush=True)
+
+            current_token = next_token
+            if is_done:
+                break
 
         # Rebuild direct_bytes from full (now-updated) cache
         direct_bytes, total_size = _build_direct_bytes(sizes_cache, folder_ids)
         elapsed = time.time() - t0
-        print(f"  [incremental] Done in {elapsed:.1f}s | Drive total: {fmt_size(total_size)}")
-
-        # Save updated cache + new token
-        _save_size_cache(sizes_cache, new_token)
+        print(f"  [incremental] Complete in {elapsed:.1f}s | {batch_num} batch(es) | {total_changes:,} total changes")
+        print(f"  [incremental] +{total_added:,} new | ~{total_updated:,} updated | -{total_removed:,} removed | Drive total: {fmt_size(total_size)}")
         return direct_bytes
+
 
     # ── FULL SCAN PATH ──────────────────────────────────────────────────────────────────
     print("  [full scan] No cache found — parallel scan starting (~4–6 min)", flush=True)
