@@ -17,7 +17,7 @@
  *   - Rule 17: child rows are keyed off the stable `n.id` (never index).
  *   - Rule 22: when `cat.driveId` is empty, no Drive link is rendered.
  */
-import type { CSSProperties, JSX, MouseEvent } from 'react';
+import { memo, type CSSProperties, type JSX, type MouseEvent } from 'react';
 import type { Category } from '@/types/archive';
 import { useUIStore } from '@/stores/uiStore';
 import { useMemoryStore } from '@/stores/memoryStore';
@@ -34,9 +34,10 @@ export interface CatBlockProps {
   readonly maxSizeGB: number;
 }
 
-export function CatBlock({ cat, maxSizeGB }: CatBlockProps): JSX.Element | null {
+function CatBlockImpl({ cat, maxSizeGB }: CatBlockProps): JSX.Element | null {
   const query = useUIStore((s) => s.query);
-  const focusedId = useUIStore((s) => s.focusedId);
+  const isFocused = useUIStore((s) => s.focusedId === cat.id);
+  const anyFocused = useUIStore((s) => s.focusedId !== null);
   const forceOpen = useUIStore((s) => s.forceOpen);
   const setFocusedId = useUIStore((s) => s.setFocusedId);
   const setActiveId = useUIStore((s) => s.setActiveId);
@@ -45,8 +46,6 @@ export function CatBlock({ cat, maxSizeGB }: CatBlockProps): JSX.Element | null 
   // Visibility gate at parent level too, but keep this short-circuit for safety.
   if (!catHasMatch(cat, query)) return null;
 
-  const isFocused = focusedId === cat.id;
-  const anyFocused = focusedId !== null;
   const show = isFocused || forceOpen || (!!query && catHasMatch(cat, query));
   const isDimmed = anyFocused && !isFocused && !forceOpen;
 
@@ -142,3 +141,5 @@ export function CatBlock({ cat, maxSizeGB }: CatBlockProps): JSX.Element | null 
     </div>
   );
 }
+
+export const CatBlock = memo(CatBlockImpl);

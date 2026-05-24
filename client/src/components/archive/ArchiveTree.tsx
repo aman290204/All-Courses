@@ -11,7 +11,7 @@
  * Rule 32 visual-diff target: the section label + sorted list of cat-blocks
  * must match public/index.html for the same dataset.
  */
-import type { JSX } from 'react';
+import { useMemo, type JSX } from 'react';
 import { useDataStore } from '@/stores/dataStore';
 import { useUIStore } from '@/stores/uiStore';
 import { catHasMatch } from '@/utils/tree';
@@ -35,8 +35,14 @@ export function ArchiveTree(): JSX.Element {
   if (!tree) return <div className={styles.loading}>No archive data.</div>;
 
   const cats = tree.categories;
-  const visible = cats.filter((c) => catHasMatch(c, query));
-  const maxSizeGB = cats.reduce((m, c) => Math.max(m, c.sizeGB || 0), 0);
+  const visible = useMemo(
+    () => cats.filter((c) => catHasMatch(c, query)),
+    [cats, query],
+  );
+  const maxSizeGB = useMemo(
+    () => cats.reduce((m, c) => Math.max(m, c.sizeGB || 0), 0),
+    [cats],
+  );
 
   return (
     <div className={styles.container}>
