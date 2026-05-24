@@ -7,7 +7,7 @@
  * Props: `searchInputRef` is forwarded down to SearchBar so the App can
  * wire ⌘K/Ctrl+K → focus without coupling Header to the keyboard binding.
  */
-import { type Ref } from 'react';
+import { useMemo, type Ref } from 'react';
 import { useDataStore } from '@/stores/dataStore';
 import { useUIStore } from '@/stores/uiStore';
 import { fmtNum } from '@/utils/format';
@@ -27,7 +27,10 @@ export function Header({ searchInputRef }: HeaderProps): JSX.Element {
   const query = useUIStore((s) => s.query);
   const setDrawerOpen = useUIStore((s) => s.setDrawerOpen);
 
-  const visibleCount = cats.filter((c) => catHasMatch(c, query)).length;
+  const visibleCount = useMemo(
+    () => cats.filter((c) => catHasMatch(c, query)).length,
+    [cats, query],
+  );
 
   const desktopTiles: ReadonlyArray<readonly [string, string]> = [
     [stats?.fileCount ? fmtNum(stats.fileCount) : '—', 'Files'],
