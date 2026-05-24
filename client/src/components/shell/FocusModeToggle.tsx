@@ -29,7 +29,7 @@ export function FocusModeToggle(): JSX.Element {
   return (
     <div className={styles.row}>
       <div className={styles.divider} />
-      <button className={`ctrl${forceOpen ? ' on' : ''}`} onClick={onExpand}>
+      <button className={`ctrl${forceOpen ? ' on' : ''}`} onClick={onExpand} aria-pressed={forceOpen}>
         Expand all
       </button>
       <button className="ctrl" onClick={onCollapse}>

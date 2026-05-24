@@ -13,6 +13,7 @@
  * by setting a single typed `--cat-rgb` property via the className-driven
  * CSS module, not by hand-rolling background gradients per element).
  */
+import { useEffect } from 'react';
 import { useDataStore } from '@/stores/dataStore';
 import { useUIStore } from '@/stores/uiStore';
 import { hexRgb } from '@/utils/format';
@@ -27,6 +28,15 @@ export function Drawer(): JSX.Element {
   const tree = useDataStore((s) => s.tree);
 
   const cats = tree?.categories ?? [];
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setDrawerOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [drawerOpen, setDrawerOpen]);
 
   const onPick = (id: string): void => {
     setActiveId(id);
@@ -49,6 +59,7 @@ export function Drawer(): JSX.Element {
         data-open={drawerOpen}
         onClick={(e) => e.stopPropagation()}
         aria-label="Subject navigation"
+        aria-modal={drawerOpen || undefined}
       >
         <div className={styles.head}>
           <span className={styles.eyebrow}>Subjects</span>
