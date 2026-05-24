@@ -29,4 +29,6 @@ client/dist/
 
 # ── Tooling session state (oh-my-claudecode) ───────────────────────
 .omc/state/
+.omc/sessions/
+.omc/project-memory.json
 client/.omc/
