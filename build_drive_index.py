@@ -223,19 +223,40 @@ def _save_size_cache(sizes, token):
                     r.delete(f"drive:size_cache:{stale}")
                 else:
                     break
-            print(f"  [redis] Saved {len(sizes):,} sizes in {len(chunks)} chunks → drive:size_cache:*", flush=True)
-            return  # done — no disk write needed
+            print(f"  [redis] Saved {len(sizes):,} sizes in {len(chunks)} chunks \u2192 drive:size_cache:*", flush=True)
+            return  # done \u2014 no disk write needed
         except Exception as e:
-            print(f"  [redis] Chunked save error: {e} — falling back to disk", flush=True)
+            print(f"  [redis] Chunked save error: {e} \u2014 falling back to disk", flush=True)
 
     # Disk fallback (local dev or Redis failure)
     try:
         payload = {"sizes": sizes, "token": token, "saved_at": saved_at, "count": len(sizes)}
         with open(SIZE_CACHE_FILE, "w") as f:
             json.dump(payload, f)
-        print(f"  [cache] Saved {len(sizes):,} sizes → {SIZE_CACHE_FILE}")
+        print(f"  [cache] Saved {len(sizes):,} sizes \u2192 {SIZE_CACHE_FILE}")
     except Exception as e:
         print(f"  [cache] Disk save error: {e}")
+
+
+def _save_token_only(token, count):
+    """
+    Update only the meta key in Redis to advance the changes token.
+    Much cheaper than a full cache write — just overwrites the tiny meta dict.
+    Used between incremental batches so a crash always resumes from the
+    last completed batch rather than the very beginning of the backlog.
+    """
+    r = _get_redis()
+    if not r:
+        return  # disk-only mode has no cheap mid-run token save
+    try:
+        raw_meta = r.get("drive:size_cache:meta")
+        if raw_meta:
+            meta = _decompress(raw_meta)
+            meta["token"] = token
+            r.set("drive:size_cache:meta", _compress(meta))
+            print(f"  [redis] token advanced (meta-only write, {count:,} entries in cache)", flush=True)
+    except Exception as e:
+        print(f"  [redis] token-only save error: {e}", flush=True)
 
 
 def _load_size_cache():
@@ -407,11 +428,12 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
 
             total_added += added; total_removed += removed; total_updated += updated
 
-            # ── Save progress after every batch ──────────────────────────────
-            # Saves the intermediate token so a crash mid-run resumes here,
-            # not from the beginning of the entire backlog.
-            _save_size_cache(sizes_cache, next_token)
-            print(f"  [incremental] Batch {batch_num} saved: +{added:,} new | ~{updated:,} updated | -{removed:,} removed | token advanced", flush=True)
+            # ── Advance token after every batch (tiny meta-only Redis write) ────────────
+            # Costs ~1ms instead of rewriting all 510k entries.
+            # If this process crashes here, next run resumes from this batch,
+            # not from the very start of the backlog.
+            _save_token_only(next_token, len(sizes_cache))
+            print(f"  [incremental] Batch {batch_num} done: +{added:,} new | ~{updated:,} updated | -{removed:,} removed | token advanced", flush=True)
 
             current_token = next_token
             if is_done:
