@@ -167,8 +167,11 @@ function buildTree(records) {
 }
 
 function countFolders(node) {
+  if (isHidden(node)) { node.folderCount = 0; return 0; }
   let n = 1;
-  for (const child of Object.values(node.children)) n += countFolders(child);
+  for (const child of Object.values(node.children)) {
+    n += countFolders(child);
+  }
   node.folderCount = n - 1;
   return n;
 }
@@ -202,6 +205,7 @@ function buildCacheFromRecords(records, fileCount = null) {
 
   for (const key of sortedKeys) {
     const node   = tree[key];
+    if (isHidden(node)) continue;
     const prefix = key.match(/^(\d+)/)?.[1]?.padStart(2,"0") || "00";
     const meta   = CAT_META[prefix] || { name:key, shortName:key, hue:"#7a8aaa" };
     countFolders(node);
