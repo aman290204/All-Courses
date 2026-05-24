@@ -21,7 +21,7 @@
  * Wrapped in `React.memo` to bound rerender scope when the parent CatBlock
  * rerenders for unrelated reasons (e.g. ambient color drift).
  */
-import { memo, type CSSProperties, type JSX, type MouseEvent } from 'react';
+import { memo, type CSSProperties, type JSX, type KeyboardEvent, type MouseEvent } from 'react';
 import type { ArchiveNode } from '@/types/archive';
 import { useMemoryStore } from '@/stores/memoryStore';
 import { nodeHasMatch } from '@/utils/tree';
@@ -59,6 +59,12 @@ function FolderRowImpl({ node, depth, q, forceOpen }: FolderRowProps): JSX.Eleme
   const onRowClick = (): void => {
     if (has) toggleExpanded(node.id);
   };
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>): void => {
+    if (has && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      toggleExpanded(node.id);
+    }
+  };
   const stopLink = (e: MouseEvent<HTMLAnchorElement>): void => {
     e.stopPropagation();
   };
@@ -71,6 +77,8 @@ function FolderRowImpl({ node, depth, q, forceOpen }: FolderRowProps): JSX.Eleme
         data-has={has ? 'true' : 'false'}
         data-open={isOpen ? 'true' : 'false'}
         onClick={onRowClick}
+        onKeyDown={onKeyDown}
+        {...(has ? { role: 'button', tabIndex: 0, 'aria-expanded': isOpen } : {})}
       >
         <span className={styles.name}>
           {has ? (
