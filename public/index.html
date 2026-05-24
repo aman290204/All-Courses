@@ -609,6 +609,19 @@ function fmtNum(n){ return n?.toLocaleString('en-IN')??'—' }
 function fmtIST(iso){ if(!iso)return null; return new Date(iso).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true})+' IST'; }
 function fmtRel(iso){ if(!iso)return null; const d=Date.now()-new Date(iso).getTime(),m=Math.floor(d/60000); if(m<1)return'just now'; if(m<60)return`${m}m ago`; const h=Math.floor(m/60); if(h<24)return`${h}h ago`; return`${Math.floor(h/24)}d ago`; }
 
+function useLS(key,init){
+  const[val,setVal]=useState(()=>{try{const s=localStorage.getItem(key);return s!==null?JSON.parse(s):init;}catch{return init;}});
+  const ref=useRef(val);ref.current=val;
+  function set(v){const next=typeof v==='function'?v(ref.current):v;ref.current=next;setVal(next);try{localStorage.setItem(key,JSON.stringify(next));}catch{}}
+  return[val,set];
+}
+function useSS(key,init){
+  const[val,setVal]=useState(()=>{try{const s=sessionStorage.getItem(key);return s!==null?JSON.parse(s):init;}catch{return init;}});
+  const ref=useRef(val);ref.current=val;
+  function set(v){const next=typeof v==='function'?v(ref.current):v;ref.current=next;setVal(next);try{sessionStorage.setItem(key,JSON.stringify(next));}catch{}}
+  return[val,set];
+}
+
 function nodeHasMatch(n,q){ if(!q)return true; if(n.name.toLowerCase().includes(q))return true; return n.children?.some(c=>nodeHasMatch(c,q))??false; }
 function catHasMatch(c,q){ if(!q)return true; if(c.name.toLowerCase().includes(q))return true; return c.children?.some(n=>nodeHasMatch(n,q))??false; }
 
@@ -619,19 +632,21 @@ function Hl({text,q}){
   return <>{text.slice(0,i)}<mark style={{background:'rgba(212,168,79,0.16)',color:'var(--gold-soft)',padding:'0 2px',borderRadius:3,fontWeight:500}}>{text.slice(i,i+q.length)}</mark>{text.slice(i+q.length)}</>;
 }
 
-function TreeNode({node,depth,q,forceOpen}){
+function TreeNode({node,depth,q,forceOpen,expandedSet=new Set(),onToggle=()=>{}}){
   const has=!!(node.children?.length);
   const cm=has&&node.children.some(c=>nodeHasMatch(c,q));
   const sm=!!q&&node.name.toLowerCase().includes(q);
   const vis=!q||sm||cm;
-  const [open,setOpen]=useState(false);
-  const isOpen=forceOpen||open||(!!q&&cm);
+  const [localOpen,setLocalOpen]=useState(false);
+  const nodeKey=node.id||null;
+  const persisted=nodeKey?expandedSet.has(nodeKey):localOpen;
+  const isOpen=forceOpen||persisted||(!!q&&cm);
   if(!vis)return null;
   const pad=depth*16+16;
   const url=node.id?`https://drive.google.com/drive/folders/${node.id}`:null;
   return(
     <div>
-      <div className="tree-row" onClick={()=>has&&setOpen(p=>!p)}
+      <div className="tree-row" onClick={()=>has&&(nodeKey?onToggle(nodeKey):setLocalOpen(p=>!p))}
         style={{display:'flex',alignItems:'center',gap:6,padding:`6px 16px 6px ${pad}px`,cursor:has?'pointer':'default',userSelect:'none'}}>
         <span style={{flex:1,fontSize:depth===0?'0.78rem':'0.73rem',fontWeight:depth===0?500:400,
           color:depth===0?'var(--text)':depth===1?'var(--text2)':'var(--text3)',lineHeight:1.45,
@@ -647,14 +662,14 @@ function TreeNode({node,depth,q,forceOpen}){
       </div>
       {has&&isOpen&&(
         <div style={{borderLeft:'1px solid var(--border2)',marginLeft:pad+10}}>
-          {node.children.map((c,i)=><TreeNode key={i} node={c} depth={depth+1} q={q} forceOpen={forceOpen}/>)}
+          {node.children.map(c=><TreeNode key={c.id||c.name} node={c} depth={depth+1} q={q} forceOpen={forceOpen} expandedSet={expandedSet} onToggle={onToggle}/>)}
         </div>
       )}
     </div>
   );
 }
 
-function CatBlock({cat,q,active,forceOpen,maxSizeGB,focusedId,onFocus}){
+function CatBlock({cat,q,active,forceOpen,maxSizeGB,focusedId,onFocus,expandedSet=new Set(),onToggle=()=>{}}){
   const [hovered,setHovered]=useState(false);
   const vis=catHasMatch(cat,q);
   const isFocused=focusedId===cat.id;
@@ -712,7 +727,7 @@ function CatBlock({cat,q,active,forceOpen,maxSizeGB,focusedId,onFocus}){
       {sizePct>0&&<div className="size-bar"><span style={{width:`${sizePct}%`}}/></div>}
       {show&&(
         <div className="tree-children" style={{paddingTop:4,paddingBottom:10,background:'rgba(0,0,0,0.22)',borderTop:'1px solid var(--border3)'}}>
-          {cat.children?.map((n,i)=><TreeNode key={i} node={n} depth={0} q={q} forceOpen={forceOpen}/>)}
+          {cat.children?.map(n=><TreeNode key={n.id||n.name} node={n} depth={0} q={q} forceOpen={forceOpen} expandedSet={expandedSet} onToggle={onToggle}/>)}
         </div>
       )}
     </div>
@@ -752,13 +767,18 @@ function App(){
   const [minTimeReached,setMinTimeReached]=useState(false);
   const [exiting,setExiting]=useState(false);
   const [revealed,setRevealed]=useState(false);
-  const [q,setQ]=useState('');
-  const [activeId,setActiveId]=useState('01');
-  const [focusedId,setFocusedId]=useState(null);
-  const [forceOpen,setForceOpen]=useState(false);
+  const [q,setQ]=useSS('vault:q','');
+  const [activeId,setActiveId]=useLS('vault:activeId','01');
+  const [focusedId,setFocusedId]=useSS('vault:focusedId',null);
+  const [forceOpen,setForceOpen]=useSS('vault:forceOpen',false);
+  const [expandedIds,setExpandedIds]=useSS('vault:expandedIds',[]);
   const [syncInfo,setSyncInfo]=useState(null);
   const [drawerOpen,setDrawerOpen]=useState(false);
+  const expandedSet=useMemo(()=>new Set(expandedIds),[expandedIds]);
+  function toggleExpanded(id){setExpandedIds(prev=>{const s=new Set(prev);s.has(id)?s.delete(id):s.add(id);return[...s];});}
   const inputRef=useRef(null);
+  const mainRef=useRef(null);
+  const scrollTimer=useRef(null);
   const nq=q.trim().toLowerCase();
 
   const load=useCallback(()=>{
@@ -810,6 +830,19 @@ function App(){
     const rgb=target?hexRgb(target.hue):'212,168,79';
     document.body.style.setProperty('--accent-rgb',rgb);
   },[focusedId,cats]);
+
+  // Restore scroll position once reveal completes and data is present
+  useEffect(()=>{
+    if(!revealed||!data||!mainRef.current)return;
+    try{const s=sessionStorage.getItem('vault:scroll');if(s)mainRef.current.scrollTop=parseInt(s,10);}catch{}
+  },[revealed,data]);
+
+  const handleScroll=useCallback(()=>{
+    if(scrollTimer.current)clearTimeout(scrollTimer.current);
+    scrollTimer.current=setTimeout(()=>{
+      try{sessionStorage.setItem('vault:scroll',String(mainRef.current?.scrollTop||0));}catch{}
+    },200);
+  },[]);
 
   function scrollTo(id){setActiveId(id);setFocusedId(id);document.getElementById(`cat-${id}`)?.scrollIntoView({behavior:'smooth',block:'start'});}
   function handleFocus(id){
@@ -1049,7 +1082,7 @@ function App(){
         </nav>
 
         {/* Main */}
-        <main style={{flex:1,overflowY:'auto',minWidth:0,position:'relative'}}>
+        <main ref={mainRef} onScroll={handleScroll} style={{flex:1,overflowY:'auto',minWidth:0,position:'relative'}}>
           {visible.length===0?(
             <div style={{padding:'120px 40px',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',gap:18}}>
               <div style={{width:52,height:52,borderRadius:13,border:'1px dashed var(--border)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}>
@@ -1070,7 +1103,7 @@ function App(){
             <div>
               <div className="section-label">Subject Index<span style={{marginLeft:10,color:'var(--text4)'}}>·  {visible.length} {visible.length===1?'subject':'subjects'}</span></div>
               {visible.map(cat=>(
-                <CatBlock key={cat.id} cat={cat} q={nq} active={cat.id===activeId} forceOpen={forceOpen} maxSizeGB={maxSizeGB} focusedId={focusedId} onFocus={handleFocus}/>
+                <CatBlock key={cat.id} cat={cat} q={nq} active={cat.id===activeId} forceOpen={forceOpen} maxSizeGB={maxSizeGB} focusedId={focusedId} onFocus={handleFocus} expandedSet={expandedSet} onToggle={toggleExpanded}/>
               ))}
               {/* Scroll fade */}
               <div className="scroll-fade"/>
