@@ -35,6 +35,6 @@ client/.vite/
 Thumbs.db
 desktop.ini
 
-# ── Tooling session state (oh-my-claudecode) ───────────────────────
+# ── Tooling session state ───────────────────────────────────────────
 .omc/
 client/.omc/

@@ -1,6 +1,6 @@
 # Cortexa Vault — Cleanup Audit
 **Date:** 2026-05-24  
-**Auditor:** Claude Sonnet 4.6  
+**Auditor:** Aman Agrahari  
 **Status:** Phases 1–8 complete, architecture stable, migration complete.
 
 ---
