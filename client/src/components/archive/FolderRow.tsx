@@ -3,7 +3,7 @@
  *
  * Ported VERBATIM from public/index.html lines 622-655 (legacy `TreeNode`).
  * Behaviour preserved exactly:
- *   - Self-owned open/close state via `useState<boolean>(false)`.
+ *   - Open/close state persisted in `memoryStore.expandedIds` (Phase 5).
  *   - `isOpen = forceOpen || open || (!!q && childMatch)` — search auto-opens
  *     any branch that contains a match.
  *   - Visibility: a row is rendered iff query is empty, the row itself
@@ -21,8 +21,9 @@
  * Wrapped in `React.memo` to bound rerender scope when the parent CatBlock
  * rerenders for unrelated reasons (e.g. ambient color drift).
  */
-import { memo, useState, type CSSProperties, type JSX, type MouseEvent } from 'react';
+import { memo, type CSSProperties, type JSX, type MouseEvent } from 'react';
 import type { ArchiveNode } from '@/types/archive';
+import { useMemoryStore } from '@/stores/memoryStore';
 import { nodeHasMatch } from '@/utils/tree';
 import { Highlight } from './Highlight';
 import styles from './FolderRow.module.css';
@@ -38,7 +39,8 @@ export interface FolderRowProps {
 }
 
 function FolderRowImpl({ node, depth, q, forceOpen }: FolderRowProps): JSX.Element | null {
-  const [open, setOpen] = useState<boolean>(false);
+  const open = useMemoryStore((s) => s.expandedIds.includes(node.id));
+  const toggleExpanded = useMemoryStore((s) => s.toggleExpanded);
 
   const has = !!node.children?.length;
   const childMatch = has && (node.children?.some((c) => nodeHasMatch(c, q)) ?? false);
@@ -55,7 +57,7 @@ function FolderRowImpl({ node, depth, q, forceOpen }: FolderRowProps): JSX.Eleme
   const channel: CSSProperties = { '--depth': depth } as CSSProperties;
 
   const onRowClick = (): void => {
-    if (has) setOpen((p) => !p);
+    if (has) toggleExpanded(node.id);
   };
   const stopLink = (e: MouseEvent<HTMLAnchorElement>): void => {
     e.stopPropagation();

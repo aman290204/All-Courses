@@ -9,6 +9,7 @@
  */
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useUIStore } from '@/stores/uiStore';
+import { useScrollRestore } from '@/hooks/useScrollRestore';
 import { Drawer } from './Drawer';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
@@ -20,7 +21,10 @@ export interface ShellProps {
 
 export function Shell({ children }: ShellProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const clearFocusOrQuery = useUIStore((s) => s.clearFocusOrQuery);
+
+  useScrollRestore(mainRef);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -44,7 +48,7 @@ export function Shell({ children }: ShellProps): JSX.Element {
       <Header searchInputRef={inputRef} />
       <div className={styles.body}>
         <Sidebar />
-        <main className={styles.main}>{children}</main>
+        <main ref={mainRef} className={styles.main}>{children}</main>
       </div>
     </div>
   );

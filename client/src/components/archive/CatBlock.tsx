@@ -20,6 +20,7 @@
 import type { CSSProperties, JSX, MouseEvent } from 'react';
 import type { Category } from '@/types/archive';
 import { useUIStore } from '@/stores/uiStore';
+import { useMemoryStore } from '@/stores/memoryStore';
 import { fmtNum } from '@/utils/format';
 import { hexRgb } from '@/utils/format';
 import { catHasMatch } from '@/utils/tree';
@@ -39,6 +40,7 @@ export function CatBlock({ cat, maxSizeGB }: CatBlockProps): JSX.Element | null 
   const forceOpen = useUIStore((s) => s.forceOpen);
   const setFocusedId = useUIStore((s) => s.setFocusedId);
   const setActiveId = useUIStore((s) => s.setActiveId);
+  const setActiveCategoryId = useMemoryStore((s) => s.setActiveCategoryId);
 
   // Visibility gate at parent level too, but keep this short-circuit for safety.
   if (!catHasMatch(cat, query)) return null;
@@ -62,7 +64,9 @@ export function CatBlock({ cat, maxSizeGB }: CatBlockProps): JSX.Element | null 
   } as CSSProperties;
 
   const onFocusClick = (): void => {
-    setFocusedId(isFocused ? null : cat.id);
+    const next = isFocused ? null : cat.id;
+    setFocusedId(next);
+    if (next !== null) setActiveCategoryId(next);
   };
   const onEnter = (): void => {
     setActiveId(cat.id);
