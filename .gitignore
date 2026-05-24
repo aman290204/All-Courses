@@ -1,6 +1,8 @@
 node_modules/
 *.log
+npm-debug.log*
 .env
+*.local
 
 # ── Auth / credentials (never commit) ──────────────────────────────
 token.pickle
@@ -26,9 +28,13 @@ __pycache__/
 # ── Vite migration: build artifacts and dependencies ───────────────
 client/node_modules/
 client/dist/
+client/.vite/
+
+# ── OS junk ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
 
 # ── Tooling session state (oh-my-claudecode) ───────────────────────
-.omc/state/
-.omc/sessions/
-.omc/project-memory.json
+.omc/
 client/.omc/
