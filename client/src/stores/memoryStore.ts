@@ -23,12 +23,18 @@ const VERSION = 1;
 let _rIC: ReturnType<typeof requestIdleCallback> | null = null;
 
 const debouncedStorage: StateStorage = {
-  getItem: (name) => localStorage.getItem(name),
+  getItem: (name) => {
+    try { return localStorage.getItem(name); } catch { return null; }
+  },
   setItem: (name, value) => {
     if (_rIC !== null) cancelIdleCallback(_rIC);
     _rIC = requestIdleCallback(
       () => {
-        localStorage.setItem(name, value);
+        try {
+          localStorage.setItem(name, value);
+        } catch {
+          // QuotaExceededError or SecurityError — discard silently, don't corrupt _rIC state
+        }
         _rIC = null;
       },
       { timeout: 300 },
@@ -39,7 +45,7 @@ const debouncedStorage: StateStorage = {
       cancelIdleCallback(_rIC);
       _rIC = null;
     }
-    localStorage.removeItem(name);
+    try { localStorage.removeItem(name); } catch { /* ignore */ }
   },
 };
 

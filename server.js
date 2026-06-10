@@ -286,11 +286,19 @@ function runPythonSync() {
     const lines = [];
     py.stdout.on("data", d => {
       const txt = d.toString().trim();
-      if (txt) { lines.push(txt); process.stdout.write("[py] " + txt + "\n"); }
+      if (txt) {
+        lines.push(txt);
+        if (lines.length > 500) lines.shift();  // cap memory during long scans
+        process.stdout.write("[py] " + txt + "\n");
+      }
     });
     py.stderr.on("data", d => {
       const txt = d.toString().trim();
-      if (txt) { lines.push("[err] " + txt); process.stderr.write("[py-err] " + txt + "\n"); }
+      if (txt) {
+        lines.push("[err] " + txt);
+        if (lines.length > 500) lines.shift();
+        process.stderr.write("[py-err] " + txt + "\n");
+      }
     });
 
     py.on("close", async (code) => {
@@ -383,9 +391,11 @@ app.get("/api/full-reset", async (req, res) => {
     }
     logEntry("reset", `Cleared ${deleted.length} Redis size-cache keys — full scan will run next sync`);
 
-    // Immediately trigger a fresh full sync
-    const syncResult = await runPythonSync();
-    res.json({ reset: true, deletedKeys: deleted, sync: syncResult });
+    // Respond immediately — full scan takes 4-28 min and would timeout if awaited
+    res.json({ reset: true, deletedKeys: deleted, message: "Full scan started. Monitor at /api/logs?key=SECRET" });
+
+    // Fire-and-forget the sync (do NOT await — HTTP already responded)
+    runPythonSync().catch(e => logEntry("reset", `Full scan error: ${e.message}`));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -401,6 +411,9 @@ app.get("/api/logs", (req, res) => {
 });
 
 app.get("/api/reload", async (req, res) => {
+  const key = req.query.key || (req.headers.authorization||"").replace(/^Bearer\s+/i,"");
+  if (!key || key !== SYNC_SECRET)
+    return res.status(401).json({ error: "Unauthorized" });
   CACHE = await buildCache();
   if (!CACHE) return res.status(500).json({ error: "Reload failed" });
   res.json({ ok: true, stats: CACHE.stats });

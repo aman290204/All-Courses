@@ -16,13 +16,15 @@ export function useScrollRestore(ref: RefObject<HTMLElement | null>): void {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const raw = sessionStorage.getItem(SCROLL_KEY);
-    if (raw !== null) {
-      const y = parseInt(raw, 10);
-      if (!isNaN(y) && y > 0) {
-        el.scrollTo({ top: y, behavior: 'instant' });
+    try {
+      const raw = sessionStorage.getItem(SCROLL_KEY);
+      if (raw !== null) {
+        const y = parseInt(raw, 10);
+        if (!isNaN(y) && y > 0) {
+          el.scrollTo({ top: y, behavior: 'instant' });
+        }
       }
-    }
+    } catch { /* sessionStorage unavailable (private browsing, iframe sandbox) */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -34,7 +36,9 @@ export function useScrollRestore(ref: RefObject<HTMLElement | null>): void {
     const onScroll = (): void => {
       if (timer !== null) clearTimeout(timer);
       timer = setTimeout(() => {
-        sessionStorage.setItem(SCROLL_KEY, String(el.scrollTop));
+        try {
+          sessionStorage.setItem(SCROLL_KEY, String(el.scrollTop));
+        } catch { /* QuotaExceededError — discard silently */ }
         timer = null;
       }, DEBOUNCE_MS);
     };
@@ -46,3 +50,4 @@ export function useScrollRestore(ref: RefObject<HTMLElement | null>): void {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
+

@@ -46,8 +46,10 @@ function CatBlockImpl({ cat, maxSizeGB }: CatBlockProps): JSX.Element | null {
   // Visibility gate at parent level too, but keep this short-circuit for safety.
   if (!catHasMatch(cat, query)) return null;
 
-  const show = isFocused || forceOpen || (!!query && catHasMatch(cat, query));
+  // catHasMatch was true above, so `!!query && hasMatch` is always true when query is non-empty.
+  const show = isFocused || forceOpen || !!query;
   const isDimmed = anyFocused && !isFocused && !forceOpen;
+
 
   const rgb = hexRgb(cat.hue);
   const url = cat.driveId ? `https://drive.google.com/drive/folders/${cat.driveId}` : null;

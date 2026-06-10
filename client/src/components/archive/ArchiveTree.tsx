@@ -26,15 +26,8 @@ export function ArchiveTree(): JSX.Element {
   const error = useDataStore((s) => s.error);
   const query = useUIStore((s) => s.query);
 
-  if (loading && !tree) {
-    return <div className={styles.loading}>Loading archive…</div>;
-  }
-  if (error && !tree) {
-    return <div className={styles.error}>Failed to load archive: {error}</div>;
-  }
-  if (!tree) return <div className={styles.loading}>No archive data.</div>;
-
-  const cats = tree.categories;
+  // MUST be before any conditional return — hooks order must be stable.
+  const cats = tree?.categories ?? [];
   const visible = useMemo(
     () => cats.filter((c) => catHasMatch(c, query)),
     [cats, query],
@@ -43,6 +36,14 @@ export function ArchiveTree(): JSX.Element {
     () => cats.reduce((m, c) => Math.max(m, c.sizeGB || 0), 0),
     [cats],
   );
+
+  if (loading && !tree) {
+    return <div className={styles.loading}>Loading archive…</div>;
+  }
+  if (error && !tree) {
+    return <div className={styles.error}>Failed to load archive: {error}</div>;
+  }
+  if (!tree) return <div className={styles.loading}>No archive data.</div>;
 
   return (
     <div className={styles.container}>

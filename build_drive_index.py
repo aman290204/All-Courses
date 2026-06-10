@@ -22,7 +22,7 @@ Setup:
 import os, json, pickle, sys, time, base64, zlib
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import datetime, timezone
 from threading import Lock
 from tqdm import tqdm
 
@@ -202,7 +202,7 @@ REDIS_CHUNK_ENTRIES = 50_000  # ~500 KB compressed per chunk (under Upstash 1MB 
 
 def _save_size_cache(sizes, token):
     """Persist cache to Redis in chunks — disk only if Redis unavailable."""
-    saved_at = datetime.utcnow().isoformat()
+    saved_at = datetime.now(timezone.utc).isoformat()
     r = _get_redis()
     if r:
         try:
@@ -237,26 +237,6 @@ def _save_size_cache(sizes, token):
     except Exception as e:
         print(f"  [cache] Disk save error: {e}")
 
-
-def _save_token_only(token, count):
-    """
-    Update only the meta key in Redis to advance the changes token.
-    Much cheaper than a full cache write — just overwrites the tiny meta dict.
-    Used between incremental batches so a crash always resumes from the
-    last completed batch rather than the very beginning of the backlog.
-    """
-    r = _get_redis()
-    if not r:
-        return  # disk-only mode has no cheap mid-run token save
-    try:
-        raw_meta = r.get("drive:size_cache:meta")
-        if raw_meta:
-            meta = _decompress(raw_meta)
-            meta["token"] = token
-            r.set("drive:size_cache:meta", _compress(meta))
-            print(f"  [redis] token advanced (meta-only write, {count:,} entries in cache)", flush=True)
-    except Exception as e:
-        print(f"  [redis] token-only save error: {e}", flush=True)
 
 
 def _load_size_cache():
@@ -331,12 +311,16 @@ def _fetch_changes_batch(service, token, max_pages=50):
         changes.extend(resp.get("changes", []))
         page_token = resp.get("nextPageToken")
         page_num  += 1
-        # newStartPageToken is only present on the final page
         if "newStartPageToken" in resp:
             next_token = resp["newStartPageToken"]
             is_done    = True
         elif page_token:
             next_token = page_token  # intermediate resume point
+        else:
+            # Edge case: neither token present — malformed/partial API response.
+            # Treat as done to avoid infinite loop with stale token.
+            print("  [warn] Drive API returned no continuation token — treating as end of changes", flush=True)
+            is_done = True
     return changes, next_token, is_done
 
 def _build_direct_bytes(sizes_cache, folder_ids):
@@ -693,7 +677,7 @@ def write_drive_folders_json(path_map, folder_by_id, sizes, output_file):
             "Name":     folder.get("name", ""),
             "Size":     sizes.get(fid, 0),
             "MimeType": "inode/directory",
-            "ModTime":  folder.get("modifiedTime", datetime.utcnow().isoformat() + "Z"),
+            "ModTime":  folder.get("modifiedTime", datetime.now(timezone.utc).isoformat()),
             "IsDir":    True,
             "ID":       fid,
         })
@@ -712,7 +696,7 @@ def write_structure_txt(path_map, folder_by_id, sizes, output_file):
         children_of[p].sort(key=lambda x: x[0].lower())
 
     lines = []
-    now   = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    now   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     lines += [f"Course Library — Full Folder Structure",
               f"Generated : {now}", f"Folders   : {len(path_map):,}",
               "=" * 72, ""]
@@ -752,7 +736,7 @@ def write_main_sizes_txt(path_map, folder_by_id, sizes, output_file):
     top.sort(key=lambda x: x["name"].lower())
     total_bytes   = sum(t["bytes"]   for t in top)
     total_folders = sum(t["folders"] for t in top)
-    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     lines = ["Course Library — Main Folder Sizes",
              f"Generated  : {now}", f"Categories : {len(top)}",
