@@ -417,6 +417,9 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
                         del sizes_cache[fid]
                         removed += 1
                 else:
+                    if not f:
+                        print(f"  [warn] New file {fid} detected without metadata, skipping.", flush=True)
+                        continue
                     size   = int(f.get("size") or 0)
                     parents = f.get("parents", [])
                     parent  = parents[0] if parents else None
@@ -428,16 +431,18 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
 
             total_added += added; total_removed += removed; total_updated += updated
 
-            # ── Advance token after every batch (tiny meta-only Redis write) ────────────
-            # Costs ~1ms instead of rewriting all 510k entries.
-            # If this process crashes here, next run resumes from this batch,
-            # not from the very start of the backlog.
-            _save_token_only(next_token, len(sizes_cache))
-            print(f"  [incremental] Batch {batch_num} done: +{added:,} new | ~{updated:,} updated | -{removed:,} removed | token advanced", flush=True)
+            # ── Save full cache + new token after EVERY batch ────────────────────────
+            # CRITICAL: must persist cache BEFORE advancing the token.
+            # _save_token_only was removed because it caused permanent data loss:
+            # if the process crashed after token save but before final _save_size_cache,
+            # new files were lost forever (token advanced past them, cache never updated).
+            _save_size_cache(sizes_cache, next_token)
+            print(f"  [incremental] Batch {batch_num} saved: +{added:,} new | ~{updated:,} updated | -{removed:,} removed | cache: {len(sizes_cache):,} files", flush=True)
 
             current_token = next_token
             if is_done:
                 break
+
 
         # Rebuild direct_bytes from full (now-updated) cache
         direct_bytes, total_size = _build_direct_bytes(sizes_cache, folder_ids)
