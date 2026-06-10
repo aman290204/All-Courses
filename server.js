@@ -362,6 +362,36 @@ app.get("/api/sync", async (req, res) => {
   res.json(result);
 });
 
+app.get("/api/full-reset", async (req, res) => {
+  const key = req.query.key || (req.headers.authorization||"").replace(/^Bearer\s+/i,"");
+  if (!key || key !== SYNC_SECRET)
+    return res.status(401).json({ error: "Unauthorized" });
+
+  if (!redis) return res.status(500).json({ error: "Redis not connected" });
+
+  try {
+    // Delete all size cache chunks + meta — forces full scan on next sync
+    const deleted = [];
+    for (let i = 0; i < 30; i++) {
+      const key2 = `drive:size_cache:${i}`;
+      if (await redis.exists(key2)) { await redis.del(key2); deleted.push(key2); }
+      else break;
+    }
+    if (await redis.exists("drive:size_cache:meta")) {
+      await redis.del("drive:size_cache:meta");
+      deleted.push("drive:size_cache:meta");
+    }
+    logEntry("reset", `Cleared ${deleted.length} Redis size-cache keys — full scan will run next sync`);
+
+    // Immediately trigger a fresh full sync
+    const syncResult = await runPythonSync();
+    res.json({ reset: true, deletedKeys: deleted, sync: syncResult });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 app.get("/api/logs", (req, res) => {
   const key = req.query.key || (req.headers.authorization||"").replace(/^Bearer\s+/i,"");
   if (!key || key !== SYNC_SECRET)
