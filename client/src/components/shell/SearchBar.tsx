@@ -44,6 +44,10 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
     [setQuery],
   );
 
+  // Cancel any pending debounced update when the component unmounts
+  // to prevent stale state writes after unmount.
+  useEffect(() => () => { debouncedSet.cancel(); }, [debouncedSet]);
+
   const onChange = (e: ChangeEvent<HTMLInputElement>): void => {
     setLocal(e.target.value);
     debouncedSet(e.target.value);

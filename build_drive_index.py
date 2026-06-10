@@ -50,17 +50,24 @@ _redis_conn = None
 _redis_ready = False
 
 def _get_redis():
-    """Return a cached Redis client, or None if REDIS_URL is not set."""
+    """
+    Return a cached Redis client, or None if REDIS_URL is not set.
+    Resets connection on error so a transient Redis failure doesn't
+    permanently disable the client for the rest of the process lifetime.
+    """
     global _redis_conn, _redis_ready
-    if _redis_ready:
+    # Return cached live connection
+    if _redis_ready and _redis_conn is not None:
         return _redis_conn
-    _redis_ready = True
+    # No REDIS_URL — skip permanently
     url = os.environ.get("REDIS_URL")
     if not url:
+        _redis_ready = True
         return None
     try:
         import redis as _rlib
-        _redis_conn = _rlib.from_url(
+        # redis-py 4+: use Redis.from_url (module-level from_url removed in 4.x)
+        _redis_conn = _rlib.Redis.from_url(
             url,
             socket_timeout=30,
             socket_connect_timeout=10,
@@ -68,10 +75,13 @@ def _get_redis():
             decode_responses=False,   # we store raw bytes (compressed)
         )
         _redis_conn.ping()
+        _redis_ready = True
         print("  [redis] Connected to Upstash")
         return _redis_conn
     except Exception as e:
         print(f"  [redis] Not available: {e}")
+        _redis_conn  = None
+        _redis_ready = False   # allow retry on next call
         return None
 
 def _compress(data_dict):
@@ -94,14 +104,24 @@ def _write_credentials_from_env():
     """
     creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
     if creds_json and not os.path.exists(CREDENTIALS_FILE):
+        try:
+            json.loads(creds_json)   # validate JSON before writing
+        except json.JSONDecodeError as e:
+            print(f"[auth] GOOGLE_CREDENTIALS_JSON is not valid JSON: {e}")
+            sys.exit(1)
         with open(CREDENTIALS_FILE, "w") as f:
             f.write(creds_json)
         print("[auth] credentials.json written from env var")
 
     token_b64 = os.environ.get("GOOGLE_TOKEN_B64")
     if token_b64 and not os.path.exists(TOKEN_FILE):
+        try:
+            decoded = base64.b64decode(token_b64)
+        except Exception as e:
+            print(f"[auth] GOOGLE_TOKEN_B64 is not valid base64: {e}")
+            sys.exit(1)
         with open(TOKEN_FILE, "wb") as f:
-            f.write(base64.b64decode(token_b64))
+            f.write(decoded)
         print("[auth] token.pickle written from env var")
 
 
@@ -110,8 +130,12 @@ def get_service():
 
     creds = None
     if os.path.exists(TOKEN_FILE):
-        with open(TOKEN_FILE, "rb") as f:
-            creds = pickle.load(f)
+        try:
+            with open(TOKEN_FILE, "rb") as f:
+                creds = pickle.load(f)
+        except Exception as e:
+            print(f"[auth] token.pickle is corrupt or unreadable ({e}) — will re-authenticate")
+            creds = None
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             print("[auth] Refreshing token…")
@@ -460,9 +484,13 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
     start_time   = time.time()
     _lock        = Lock()
 
-    # Load credentials once — they are thread-safe for reads
-    with open(TOKEN_FILE, "rb") as _tf:
-        _creds = pickle.load(_tf)
+    # Load credentials once — shared across workers (google-auth handles refresh locking)
+    try:
+        with open(TOKEN_FILE, "rb") as _tf:
+            _creds = pickle.load(_tf)
+    except Exception as e:
+        print(f"  [error] Cannot load token.pickle for full scan: {e}")
+        raise
 
     def _fetch_batch(batch):
         """
@@ -565,8 +593,13 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
             q = (f"({q_parts}) and mimeType!='application/vnd.google-apps.folder'"
                  f" and trashed=false")
             pt = None
+            page_guard = 0
             try:
                 while True:
+                    page_guard += 1
+                    if page_guard > 5000:   # safety: no batch should ever exceed 5M files
+                        print(f"  [retry] {i}/{len(failed_batches)} page limit hit — stopping", flush=True)
+                        break
                     resp = retry_execute(lambda p=pt: service.files().list(
                         q=q, pageSize=1000,
                         fields="nextPageToken, files(id,size,parents)",
@@ -577,6 +610,13 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
                         fid    = f.get("id")
                         sz     = int(f.get("size") or 0)
                         parent = (f.get("parents") or [None])[0]
+                        # Subtract old values to avoid double-counting files
+                        # that were already processed in the parallel pass
+                        if fid in sizes_cache:
+                            old_sz, old_par = sizes_cache[fid]
+                            total_size -= old_sz
+                            if old_sz and old_par and old_par in folder_ids:
+                                direct_bytes[old_par] -= old_sz
                         sizes_cache[fid] = [sz, parent]
                         total_size += sz
                         if sz and parent and parent in folder_ids:
@@ -599,65 +639,95 @@ def fetch_file_sizes(service, folder_ids, max_workers=None):
 # ─────────────────────────────── PHASE 3: ROLLUP ─────────────────────────────
 
 def build_path_map(folders, root_id):
-    """Returns { folder_id: 'relative/path' } for folders under root_id."""
+    """
+    Returns { folder_id: 'relative/path' } for all folders under root_id.
+    Fully iterative — no recursion — safe on arbitrarily deep trees.
+    """
     by_id = {f["id"]: f for f in folders}
-    cache = {}
-
-    def resolve(fid):
-        if fid in cache:
-            return cache[fid]
-        if fid == root_id:
-            cache[fid] = ""
-            return ""
-        folder = by_id.get(fid)
-        if not folder:
-            cache[fid] = None
-            return None
-        parents = folder.get("parents", [])
-        if not parents:
-            cache[fid] = None
-            return None
-        pp = resolve(parents[0])
-        if pp is None:
-            cache[fid] = None
-            return None
-        path = folder["name"] if pp == "" else f"{pp}/{folder['name']}"
-        cache[fid] = path
-        return path
+    cache = {root_id: ""}   # root resolves to empty string
 
     path_map = {}
-    for f in tqdm(folders, desc="  building paths", ncols=72):
-        p = resolve(f["id"])
-        if p is not None and p != "":
-            path_map[f["id"]] = p
+    for folder in tqdm(folders, desc="  building paths", ncols=72):
+        fid = folder["id"]
+        if fid in cache:
+            if cache[fid] is not None and cache[fid] != "":
+                path_map[fid] = cache[fid]
+            continue
+
+        # Walk the parent chain iteratively until we hit a cached node or a dead end
+        chain = []     # [(fid, name)] bottom-up order
+        cur   = fid
+        while cur not in cache:
+            f = by_id.get(cur)
+            if not f:
+                cache[cur] = None
+                break
+            parents = f.get("parents", [])
+            if not parents:
+                cache[cur] = None
+                break
+            chain.append((cur, f["name"]))
+            cur = parents[0]
+
+        # Now resolve top-down from the cached ancestor
+        base = cache.get(cur)  # None if dead end, "" if root, "path" otherwise
+        if base is None:
+            # Dead end — mark all in chain as unreachable
+            for cid, _ in chain:
+                cache[cid] = None
+        else:
+            # Assemble paths from root down
+            for cid, name in reversed(chain):
+                base = name if base == "" else f"{base}/{name}"
+                cache[cid] = base
+
+        result = cache.get(fid)
+        if result is not None and result != "":
+            path_map[fid] = result
+
     return path_map
 
+
 def rollup_sizes(path_map, direct_bytes, all_folders):
-    """Propagate direct file bytes up through the folder tree (recursive totals)."""
-    children = defaultdict(list)
+    """
+    Propagate direct file bytes up through the folder tree (recursive totals).
+    Fully iterative using topological order — no recursion — safe on deep trees.
+    """
     by_id    = {f["id"]: f for f in all_folders}
+    children = defaultdict(list)
+    parents_of = {}     # fid → parent_fid (within path_map)
 
     for fid in path_map:
         folder  = by_id.get(fid, {})
         parents = folder.get("parents", [])
         if parents and parents[0] in path_map:
-            children[parents[0]].append(fid)
+            parent = parents[0]
+            children[parent].append(fid)
+            parents_of[fid] = parent
 
-    recursive = {}
+    # Topological sort: compute in-degree (number of children) for each node.
+    # Leaves (no children) are processed first, then their parents, etc.
+    # This guarantees each parent is processed AFTER all its children.
+    in_degree = {fid: len(children.get(fid, [])) for fid in path_map}
+    queue     = [fid for fid in path_map if in_degree[fid] == 0]  # leaves first
+    recursive = dict(direct_bytes)   # start with direct file bytes per folder
+    # Ensure every folder has an entry even if it has no direct files
+    for fid in path_map:
+        recursive.setdefault(fid, 0)
 
-    def rollup(fid):
-        if fid in recursive:
-            return recursive[fid]
-        total = direct_bytes.get(fid, 0)
-        for child in children.get(fid, []):
-            total += rollup(child)
-        recursive[fid] = total
-        return total
-
-    for fid in tqdm(list(path_map.keys()), desc="  rolling up", ncols=72):
-        rollup(fid)
+    processed = 0
+    total     = len(path_map)
+    for fid in tqdm(queue, desc="  rolling up", ncols=72, total=total):
+        parent = parents_of.get(fid)
+        if parent and parent in recursive:
+            recursive[parent] = recursive.get(parent, 0) + recursive.get(fid, 0)
+            in_degree[parent] -= 1
+            if in_degree[parent] == 0:
+                queue.append(parent)
+        processed += 1
 
     return recursive
+
 
 # ─────────────────────────────── PHASE 4: OUTPUT ─────────────────────────────
 
@@ -687,11 +757,19 @@ def write_drive_folders_json(path_map, folder_by_id, sizes, output_file):
     print(f"[✓] {output_file}  →  {len(records):,} records")
 
 def write_structure_txt(path_map, folder_by_id, sizes, output_file):
-    children_of = defaultdict(list)
+    # Precompute children_of and sub_count in a single O(N log N) pass.
+    children_of = defaultdict(list)   # parent_path → [(name, fid, full_path)]
+    sub_count   = defaultdict(int)    # full_path → number of descendants
+
     for fid, path in path_map.items():
         parts  = path.split("/")
         parent = "/".join(parts[:-1])
         children_of[parent].append((parts[-1], fid, path))
+        # Every ancestor gets +1 descendant
+        for depth in range(len(parts) - 1):
+            ancestor = "/".join(parts[:depth + 1])
+            sub_count[ancestor] += 1
+
     for p in children_of:
         children_of[p].sort(key=lambda x: x[0].lower())
 
@@ -701,35 +779,47 @@ def write_structure_txt(path_map, folder_by_id, sizes, output_file):
               f"Generated : {now}", f"Folders   : {len(path_map):,}",
               "=" * 72, ""]
 
-    def write_node(path, depth):
-        for name, fid, full_path in children_of.get(path, []):
-            indent    = "  " * depth
-            sub_count = sum(1 for p in path_map.values() if p.startswith(full_path + "/"))
-            sz        = fmt_size(sizes.get(fid, 0))
+    # Iterative DFS (replaces recursive write_node — avoids RecursionError on deep trees)
+    stack = [("", 0)]
+    while stack:
+        path, depth = stack.pop()
+        children = children_of.get(path, [])
+        # Push in reverse so left-to-right order is preserved (stack is LIFO)
+        for name, fid, full_path in reversed(children):
+            indent = "  " * depth
+            count  = sub_count.get(full_path, 0)
+            sz     = fmt_size(sizes.get(fid, 0))
             if depth == 0:
-                lines.append(f"{indent}{name}  [{sub_count:,} sub-folders | {sz}]")
+                lines.append(f"{indent}{name}  [{count:,} sub-folders | {sz}]")
             elif depth == 1:
-                lines.append(f"{indent}{name}  [{sub_count:,} | {sz}]")
+                lines.append(f"{indent}{name}  [{count:,} | {sz}]")
             else:
                 lines.append(f"{indent}{name}")
-            write_node(full_path, depth + 1)
+            stack.append((full_path, depth + 1))
 
-    write_node("", 0)
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     print(f"[✓] {output_file}  →  {len(lines):,} lines")
 
 def write_main_sizes_txt(path_map, folder_by_id, sizes, output_file):
+    # Precompute sub_count for each top-level category in O(N) — one pass over all paths.
+    # OLD: sub_count = sum(1 for p in path_map.values() if p.startswith(path + "/"))
+    # was O(N²): 17 categories × 23k paths = 391k comparisons. Now O(N).
+    sub_count_map = defaultdict(int)
+    for path in path_map.values():
+        if "/" in path:
+            top = path.split("/")[0]
+            sub_count_map[top] += 1
+
     top = []
     for fid, path in path_map.items():
         if "/" in path:
             continue
-        folder    = folder_by_id.get(fid, {})
-        sub_count = sum(1 for p in path_map.values() if p.startswith(path + "/"))
+        folder = folder_by_id.get(fid, {})
         top.append({
             "name":    path,
             "bytes":   sizes.get(fid, 0),
-            "folders": sub_count,
+            "folders": sub_count_map.get(path, 0),
             "mod":     folder.get("modifiedTime", "")[:10],
             "url":     f"https://drive.google.com/drive/folders/{fid}",
         })
@@ -757,6 +847,7 @@ def write_main_sizes_txt(path_map, folder_by_id, sizes, output_file):
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     print(f"[✓] {output_file}  →  {len(top)} categories")
+
 
 # ─────────────────────────────── MAIN ────────────────────────────────────────
 

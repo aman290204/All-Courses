@@ -32,19 +32,25 @@ export function Header({ searchInputRef }: HeaderProps): JSX.Element {
     [cats, query],
   );
 
-  const desktopTiles: ReadonlyArray<readonly [string, string]> = [
-    [stats?.fileCount ? fmtNum(stats.fileCount) : '—', 'Files'],
-    [fmtNum(stats?.totalFolders), 'Folders'],
-    [stats?.totalSize ?? '—', 'Total Size'],
-    [fmtNum(stats?.totalCategories), 'Subjects'],
-  ];
+  const desktopTiles: ReadonlyArray<readonly [string, string]> = useMemo(
+    () => [
+      [stats?.fileCount ? fmtNum(stats.fileCount) : '—', 'Files'],
+      [fmtNum(stats?.totalFolders), 'Folders'],
+      [stats?.totalSize ?? '—', 'Total Size'],
+      [fmtNum(stats?.totalCategories), 'Subjects'],
+    ],
+    [stats],
+  );
 
-  const mobileTiles: ReadonlyArray<readonly [string, string]> = [
-    [stats?.totalSize ?? '—', 'Storage'],
-    [stats?.fileCount ? fmtNum(stats.fileCount) : '—', 'Files'],
-    [fmtNum(stats?.totalFolders), 'Folders'],
-    [fmtNum(stats?.totalCategories), 'Subjects'],
-  ];
+  const mobileTiles: ReadonlyArray<readonly [string, string]> = useMemo(
+    () => [
+      [stats?.totalSize ?? '—', 'Storage'],
+      [stats?.fileCount ? fmtNum(stats.fileCount) : '—', 'Files'],
+      [fmtNum(stats?.totalFolders), 'Folders'],
+      [fmtNum(stats?.totalCategories), 'Subjects'],
+    ],
+    [stats],
+  );
 
   return (
     <header className={styles.header}>

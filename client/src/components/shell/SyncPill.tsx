@@ -14,12 +14,6 @@ import styles from './SyncPill.module.css';
 
 type Tone = 'ok' | 'syncing' | 'err';
 
-function classify(status: string): Tone {
-  if (status.startsWith('syncing') || status.startsWith('running')) return 'syncing';
-  if (status.startsWith('err') || status.startsWith('fail')) return 'err';
-  return 'ok';
-}
-
 const LABELS: Record<Tone, string> = {
   ok: 'Indexed & Synced',
   syncing: 'Syncing…',
@@ -29,7 +23,17 @@ const LABELS: Record<Tone, string> = {
 export function SyncPill(): JSX.Element {
   const syncInfo = useDataStore((s) => s.syncInfo);
   const tree = useDataStore((s) => s.tree);
-  const tone = classify(syncInfo?.lastSyncStatus ?? '');
+
+  // isSyncing is the authoritative flag — lastSyncStatus stays stale (previous
+  // value) while Python is running; it's only updated when sync completes.
+  const isSyncing = syncInfo?.isSyncing ?? false;
+  const status = syncInfo?.lastSyncStatus ?? '';
+  const tone: Tone = isSyncing
+    ? 'syncing'
+    : (status.startsWith('err') || status.startsWith('fail') || status.startsWith('spawn'))
+      ? 'err'
+      : 'ok';
+
   const ts = syncInfo?.lastSyncTime ?? tree?.stats.lastUpdated ?? null;
   const label = LABELS[tone];
   const formatted = fmtIST(ts);

@@ -21,6 +21,9 @@ const DATA_FILE  = path.join(__dirname, "drive_folders.json");
 const STATE_FILE = path.join(__dirname, ".sync-state.json");
 const PYTHON_BIN = process.platform === "win32" ? "python" : "python3";
 const SYNC_SECRET = process.env.SYNC_SECRET || "localdev-changeme";
+if (!process.env.SYNC_SECRET) {
+  console.warn("[security] SYNC_SECRET env var not set — using insecure default 'localdev-changeme'");
+}
 
 // ─── Static asset directory ──────────────────────────────────────────────────
 // USE_VITE_BUILD=true switches the static-serve root from legacy public/ to
@@ -132,6 +135,20 @@ function cleanName(name) {
     .trim();
 }
 
+// ─── Stable synthetic ID for intermediate (non-Drive) tree nodes ─────────────
+// Intermediate nodes are created when a path like "01/Trading/Algo" is added but
+// "01/Trading" has no Drive record yet. These need a stable, unique key for React.
+// FNV-1a 32-bit hash — fast, deterministic, collision-resistant for path strings.
+function fnv1a(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;  // 32-bit unsigned
+  }
+  return h.toString(16).padStart(8, "0");
+}
+function synId(path) { return `syn_${fnv1a(path)}`; }
+
 // ─── Tree builder ─────────────────────────────────────────────────────────────
 function buildTree(records) {
   const root   = {};
@@ -150,7 +167,7 @@ function buildTree(records) {
       for (let i = 1; i < parts.length - 1; i++) {
         const seg = parts.slice(0, i+1).join("/");
         if (!node.children[seg])
-          node.children[seg] = { id:"", name:parts[i], path:seg, children:{}, folderCount:0, sizeBytes:0 };
+          node.children[seg] = { id: synId(seg), name: parts[i], path: seg, children: {}, folderCount: 0, sizeBytes: 0 };
         node = node.children[seg];
       }
       const key = rec.Path;
@@ -308,26 +325,33 @@ function runPythonSync() {
         syncState.lastSyncTime   = new Date().toISOString();
         syncState.lastSyncStatus = `ok — ${elapsed}s`;
         logEntry("sync", `Python completed in ${elapsed}s — rebuilding cache`);
-        CACHE = await buildCache();
+        const fresh = await buildCache();
+        if (fresh) {
+          CACHE = fresh;  // only replace if new build succeeded — keeps stale cache on disk errors
 
-        // ─ Persist drive_folders.json to Redis (replaces disk as primary store)
-        if (redis && CACHE) {
-          try {
-            const records = readJsonFile(DATA_FILE);
-            if (records) {
-              const buf = await rCompress(records);
-              await redis.set("drive:folders", buf);
-              const kb = (buf.length / 1024).toFixed(0);
-              logEntry("redis", `drive:folders saved (${kb} KB compressed, ${records.length} records)`);
-            }
-          } catch(e) { logEntry("redis", `Save error: ${e.message}`); }
+          // ─ Persist drive_folders.json to Redis using records already read by buildCache()
+          // We reuse the cached records from the in-memory fresh.categories to avoid a
+          // second disk read. But buildCache() already read them internally, so we re-read
+          // only if Redis is available (the data was just written by Python, so it's fresh).
+          if (redis) {
+            try {
+              const records = readJsonFile(DATA_FILE);
+              if (records) {
+                const buf = await rCompress(records);
+                await redis.set("drive:folders", buf);
+                const kb = (buf.length / 1024).toFixed(0);
+                logEntry("redis", `drive:folders saved (${kb} KB compressed, ${records.length} records)`);
+              }
+            } catch(e) { logEntry("redis", `Save error: ${e.message}`); }
+          }
+        } else {
+          logEntry("sync", "Cache rebuild returned null — keeping previous cache");
         }
-
-        resolve({ ok: true, elapsed, lines: lines.slice(-20) });
+        resolve({ ok: true, elapsed });
       } else {
         syncState.lastSyncStatus = `error (exit ${code})`;
         logEntry("sync", `Python exited with code ${code}`);
-        resolve({ ok: false, code, lines: lines.slice(-20) });
+        resolve({ ok: false, code });
       }
     });
 
@@ -345,17 +369,18 @@ function runPythonSync() {
 // 2:30 PM IST  = 09:00 UTC
 cron.schedule("30 21 * * *", () => {
   logEntry("cron", "⏰ 3:00 AM IST — daily sync");
-  runPythonSync();
+  runPythonSync().catch(e => logEntry("cron", `Sync error: ${e.message}`));
 }, { timezone: "UTC" });
 
 cron.schedule("0 9 * * *", () => {
   logEntry("cron", "⏰ 2:30 PM IST — daily sync");
-  runPythonSync();
+  runPythonSync().catch(e => logEntry("cron", `Sync error: ${e.message}`));
 }, { timezone: "UTC" });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use(compression());
-app.use(express.static(STATIC_DIR));
+// NOTE: API routes MUST be registered before express.static so Express evaluates
+// them before falling through to static file serving (order matters in Express).
 
 app.get("/api/tree", (req, res) => {
   if (!CACHE) return res.status(503).json({ error: "Data not loaded yet" });
@@ -366,8 +391,16 @@ app.get("/api/sync", async (req, res) => {
   const key = req.query.key || (req.headers.authorization||"").replace(/^Bearer\s+/i,"");
   if (!key || key !== SYNC_SECRET)
     return res.status(401).json({ error: "Unauthorized" });
-  const result = await runPythonSync();
-  res.json(result);
+
+  // Guard: don't start a second sync if one is already running
+  if (syncState.isSyncing)
+    return res.json({ ok: false, reason: "already_running", message: "A sync is already in progress. Monitor at /api/status" });
+
+  // Respond immediately — sync takes 3-28 min and would hit Render's 60s HTTP timeout if awaited
+  res.json({ ok: true, message: "Sync started in background. Monitor at /api/status and /api/logs?key=SECRET" });
+
+  // Fire-and-forget (do NOT await — HTTP already responded)
+  runPythonSync().catch(e => logEntry("sync", `Sync error: ${e.message}`));
 });
 
 app.get("/api/full-reset", async (req, res) => {
@@ -378,12 +411,13 @@ app.get("/api/full-reset", async (req, res) => {
   if (!redis) return res.status(500).json({ error: "Redis not connected" });
 
   try {
-    // Delete all size cache chunks + meta — forces full scan on next sync
+    // Delete all size cache chunks + meta — forces full scan on next sync.
+    // Scans all 30 possible slot indices regardless of gaps (e.g. from Redis eviction)
+    // so non-contiguous keys are fully cleared.
     const deleted = [];
     for (let i = 0; i < 30; i++) {
       const key2 = `drive:size_cache:${i}`;
       if (await redis.exists(key2)) { await redis.del(key2); deleted.push(key2); }
-      else break;
     }
     if (await redis.exists("drive:size_cache:meta")) {
       await redis.del("drive:size_cache:meta");
@@ -406,7 +440,7 @@ app.get("/api/logs", (req, res) => {
   const key = req.query.key || (req.headers.authorization||"").replace(/^Bearer\s+/i,"");
   if (!key || key !== SYNC_SECRET)
     return res.status(401).json({ error: "Unauthorized" });
-  const limit = Math.min(parseInt(req.query.limit)||50, 100);
+  const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
   res.json({ total: SYNC_LOG.length, entries: SYNC_LOG.slice(-limit).reverse() });
 });
 
@@ -427,6 +461,15 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true, uptime: Math.floor(process.uptime()), cacheLoaded: !!CACHE });
 });
 
+// ─── Unknown /api/* paths get JSON 404, not HTML 200 from the catch-all
+app.use("/api", (req, res) => {
+  res.status(404).json({ error: `No API route: ${req.method} ${req.path}` });
+});
+
+// ─── Static assets (registered AFTER API routes — order matters in Express)
+app.use(express.static(STATIC_DIR));
+
+// ─── SPA fallback: serve index.html for all non-API GET requests
 app.get("*", (req, res) => {
   res.sendFile(path.join(STATIC_DIR, "index.html"));
 });
