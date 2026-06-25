@@ -26,12 +26,12 @@ if (!process.env.SYNC_SECRET) {
 }
 
 // ─── Static asset directory ──────────────────────────────────────────────────
-// USE_VITE_BUILD=true switches the static-serve root from legacy public/ to
-// the Vite build output at client/dist. Default (unset/false) preserves the
-// legacy build at :3000 for parity comparison per MIGRATION_RULES.md rule 34.
-const USE_VITE_BUILD = process.env.USE_VITE_BUILD === "true";
-const STATIC_DIR = USE_VITE_BUILD
-  ? path.join(__dirname, "client", "dist")
+// Auto-detect: use client/dist (Vite build) when it exists — this is always
+// true on Render after render-build.sh runs. Falls back to public/ for local
+// dev without a build. USE_VITE_BUILD=true overrides to force client/dist.
+const viteDist = path.join(__dirname, "client", "dist");
+const STATIC_DIR = (process.env.USE_VITE_BUILD === "true" || fs.existsSync(path.join(viteDist, "index.html")))
+  ? viteDist
   : path.join(__dirname, "public");
 
 // ─── Redis (Upstash) ─────────────────────────────────────────────────────────
@@ -509,7 +509,7 @@ const startServer = async () => {
     console.log("[server] Sync engine: Python (build_drive_index.py)");
     console.log("[server] Schedule: 3:00 AM IST + 2:30 PM IST daily");
     console.log(`[server] Redis: ${redis ? "connected" : "disabled (no REDIS_URL)"}`);
-    console.log(`[server] Static dir: ${USE_VITE_BUILD ? "client/dist (Vite build)" : "public/ (legacy)"}`);
+    console.log(`[server] Static dir: ${STATIC_DIR} ${fs.existsSync(path.join(STATIC_DIR, "index.html")) ? "✓" : "⚠ index.html missing!"}`);
   });
 };
 
